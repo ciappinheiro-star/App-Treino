@@ -1,12 +1,12 @@
 export const metadata = {
   title: 'App Treino',
-  description: 'Aplicação de treinos',
+  description: 'Aplicação Next.js',
 }
 
 export default function RootLayout({ children }) {
   return (
-    
-      {children}
-    
+    <html lang="pt-BR">
+      <body>{children}</body>
+    </html>
   )
 }
