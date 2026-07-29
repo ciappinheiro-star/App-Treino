@@ -1,14 +1,12 @@
 export const metadata = {
   title: 'App Treino',
-  description: 'Controle de treinos e progresso',
+  description: 'Aplicação de treinos',
 }
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="pt-BR">
-      <body style={{ margin: 0, padding: 0, boxSizing: 'border-box' }}>
-        {children}
-      </body>
-    </html>
+    
+      {children}
+    
   )
 }
