@@ -1,52 +1,29 @@
 'use client';
 import { useState } from 'react';
 
-// Paleta baseada no visual moderno e esportivo
+// Paleta moderna e esportiva
 const THEME = {
   bg: '#F4F5F9',
   cardBg: '#FFFFFF',
   accent: '#FF4757',
-  accentSecondary: '#6C5CE7',
   textPrimary: '#1E272E',
   textSecondary: '#808E9B',
   border: '#EAECEF'
 };
 
-// Ícones SVG minimalistas para cara de app nativo
-const Icons = {
-  Dumbbell: () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="m6.5 6.5 11 11" /><path d="m21 21-1-1" /><path d="m3 3 1 1" /><path d="m18 22 4-4" /><path d="m2 6 4-4" /><path d="m3 10 7-7" /><path d="m14 21 7-7" />
-    </svg>
-  ),
-  Flame: () => (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 3z" />
-    </svg>
-  ),
-  Lightning: () => (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-    </svg>
-  ),
-  Legs: () => (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="m7 21 3-9-1-9" /><path d="m17 21-3-9 1-9" />
-    </svg>
-  ),
-  Target: () => (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" />
-    </svg>
-  )
-};
+// Ícone principal de haltere para o header
+const DumbbellIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m6.5 6.5 11 11" /><path d="m21 21-1-1" /><path d="m3 3 1 1" /><path d="m18 22 4-4" /><path d="m2 6 4-4" /><path d="m3 10 7-7" /><path d="m14 21 7-7" />
+  </svg>
+);
 
 export default function Home() {
   const [workouts] = useState([
-    { id: 'A', title: 'Peito & Tríceps', category: 'Hipertrofia', duration: '45 min', color: '#FF4757', Icon: Icons.Flame },
-    { id: 'B', title: 'Costas & Bíceps', category: 'Hipertrofia', duration: '50 min', color: '#6C5CE7', Icon: Icons.Lightning },
-    { id: 'C', title: 'Pernas Completo', category: 'Força', duration: '60 min', color: '#00D2D3', Icon: Icons.Legs },
-    { id: 'D', title: 'Ombros & Abdômen', category: 'Definição', duration: '40 min', color: '#FF9F43', Icon: Icons.Target },
+    { id: 'A', title: 'Peito & Tríceps', category: 'Hipertrofia', duration: '45 min', color: '#FF4757' },
+    { id: 'B', title: 'Costas & Bíceps', category: 'Hipertrofia', duration: '50 min', color: '#6C5CE7' },
+    { id: 'C', title: 'Pernas Completo', category: 'Força', duration: '60 min', color: '#00D2D3' },
+    { id: 'D', title: 'Ombros & Abdômen', category: 'Definição', duration: '40 min', color: '#FF9F43' },
   ]);
 
   return (
@@ -59,7 +36,7 @@ export default function Home() {
     }}>
       <div style={{ maxWidth: '480px', margin: '0 auto' }}>
         
-        {/* Top Header estilo App Mobile */}
+        {/* Header Superior */}
         <header style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
@@ -75,7 +52,6 @@ export default function Home() {
             </h1>
           </div>
           
-          {/* Badge do Ícone Principal com Glow */}
           <div style={{
             width: '48px',
             height: '48px',
@@ -87,11 +63,11 @@ export default function Home() {
             color: '#FFF',
             boxShadow: '0 8px 16px rgba(255, 71, 87, 0.35)'
           }}>
-            <Icons.Dumbbell />
+            <DumbbellIcon />
           </div>
         </header>
 
-        {/* Card de Resumo de Progresso */}
+        {/* Card de Resumo no Topo */}
         <div style={{
           background: 'linear-gradient(135deg, #2D3436 0%, #1E272E 100%)',
           borderRadius: '24px',
@@ -111,8 +87,8 @@ export default function Home() {
             </span>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <span style={{ fontSize: '1.8rem', fontWeight: '800', color: THEME.accent }}>100%</span>
-            <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.7, fontWeight: '600' }}>Foco Total</p>
+            <span style={{ fontSize: '1.6rem', fontWeight: '800', color: THEME.accent }}>0 / 4</span>
+            <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', opacity: 0.7, fontWeight: '600' }}>Concluídos</p>
           </div>
         </div>
 
@@ -122,70 +98,69 @@ export default function Home() {
           <span style={{ fontSize: '0.85rem', color: THEME.accent, fontWeight: '700' }}>4 Treinos</span>
         </div>
 
-        {/* Lista de Treinos com Ícones Integrados */}
+        {/* Lista de Treinos com Letras A, B, C, D */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {workouts.map((workout) => {
-            const IconComponent = workout.Icon;
-            return (
-              <div key={workout.id} style={{
-                backgroundColor: THEME.cardBg,
-                borderRadius: '22px',
-                padding: '16px 20px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                boxShadow: '0 4px 15px rgba(0,0,0,0.03)',
-                border: `1px solid ${THEME.border}`
-              }}>
-                
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  {/* Badge com Ícone Customizado para cada Treino */}
-                  <div style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '16px',
-                    backgroundColor: `${workout.color}15`,
-                    color: workout.color,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
-                    <IconComponent />
-                  </div>
-
-                  <div>
-                    <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '700', color: THEME.textPrimary }}>
-                      {workout.title}
-                    </h4>
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '4px', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.75rem', color: THEME.textSecondary, fontWeight: '600' }}>
-                        ⏱️ {workout.duration}
-                      </span>
-                      <span style={{ fontSize: '0.75rem', color: THEME.textSecondary }}>•</span>
-                      <span style={{ fontSize: '0.75rem', color: THEME.textSecondary, fontWeight: '600' }}>
-                        {workout.category}
-                      </span>
-                    </div>
-                  </div>
+          {workouts.map((workout) => (
+            <div key={workout.id} style={{
+              backgroundColor: THEME.cardBg,
+              borderRadius: '22px',
+              padding: '16px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              boxShadow: '0 4px 15px rgba(0,0,0,0.03)',
+              border: `1px solid ${THEME.border}`
+            }}>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                {/* Badge A, B, C, D */}
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '16px',
+                  backgroundColor: `${workout.color}15`,
+                  color: workout.color,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.25rem',
+                  fontWeight: '800'
+                }}>
+                  {workout.id}
                 </div>
 
-                {/* Botão de Ação Pílula */}
-                <button style={{
-                  backgroundColor: THEME.accent,
-                  color: '#FFF',
-                  border: 'none',
-                  padding: '10px 18px',
-                  borderRadius: '30px',
-                  fontWeight: '700',
-                  fontSize: '0.85rem',
-                  cursor: 'pointer',
-                  boxShadow: `0 4px 12px ${THEME.accent}40`
-                }}>
-                  Iniciar
-                </button>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '700', color: THEME.textPrimary }}>
+                    {workout.title}
+                  </h4>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '4px', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.75rem', color: THEME.textSecondary, fontWeight: '600' }}>
+                      ⏱️ {workout.duration}
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: THEME.textSecondary }}>•</span>
+                    <span style={{ fontSize: '0.75rem', color: THEME.textSecondary, fontWeight: '600' }}>
+                      {workout.category}
+                    </span>
+                  </div>
+                </div>
               </div>
-            );
-          })}
+
+              {/* Botão de Ação */}
+              <button style={{
+                backgroundColor: THEME.accent,
+                color: '#FFF',
+                border: 'none',
+                padding: '10px 18px',
+                borderRadius: '30px',
+                fontWeight: '700',
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+                boxShadow: `0 4px 12px ${THEME.accent}40`
+              }}>
+                Iniciar
+              </button>
+            </div>
+          ))}
         </div>
 
       </div>
