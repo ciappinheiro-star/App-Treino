@@ -1,18 +1,14 @@
 'use client';
 import { useState, useEffect } from 'react';
 
-// Paleta baseada 100% nas imagens enviadas
+// Paleta Vibrante e Colorida sobre Fundo Roxo Degradê
 const THEME = {
-  bgSidebar: '#EBE6F5',   // Lilás suave da imagem 1
-  bgMain: '#F2F5F9',      // Azul/Cinza clarinho e limpo da imagem 2
-  cardBg: '#FFFFFF',      // Cards brancos limpos
-  cardBorder: '#E1E7EF',  // Borda sutil dos cards
-  textPrimary: '#1E293B',  // Texto escuro
+  bgGradient: 'linear-gradient(180deg, #2E1065 0%, #1E1B4B 100%)', // Roxo degradê elegante
+  cardBg: 'rgba(255, 255, 255, 0.95)', // Card branco translúcido
+  cardBorder: 'rgba(255, 255, 255, 0.2)',
+  textPrimary: '#0F172A',
   textSecondary: '#64748B',
-  accentBlue: '#2563EB',   // Detalhe lateral Treino A
-  accentPurple: '#7C3AED', // Detalhe lateral Treino B
-  accentMint: '#059669',   // Para status concluído
-  inputBg: '#F8FAFC'
+  inputBg: '#F1F5F9'
 };
 
 export default function Home() {
@@ -23,17 +19,19 @@ export default function Home() {
   const [restTimer, setRestTimer] = useState(null);
   const [totalCompleted, setTotalCompleted] = useState(0);
 
+  // Cada botão do menu com uma cor/gradiente própria
   const navItems = [
-    { id: 'visao-geral', label: 'Visão Geral', icon: '🏠' },
-    { id: 'meus-treinos', label: 'Meus Treinos', icon: '📋' },
-    { id: 'estatisticas', label: 'Estatísticas', icon: '📈' },
-    { id: 'perfil', label: 'Perfil', icon: '👤' },
-    { id: 'configuracoes', label: 'Configurações', icon: '⚙️' }
+    { id: 'visao-geral', label: 'Início', icon: '🏠', gradient: 'linear-gradient(135deg, #10B981, #059669)', color: '#10B981' },
+    { id: 'meus-treinos', label: 'Treinos', icon: '📋', gradient: 'linear-gradient(135deg, #8B5CF6, #6D28D9)', color: '#8B5CF6' },
+    { id: 'estatisticas', label: 'Dados', icon: '📈', gradient: 'linear-gradient(135deg, #3B82F6, #1D4ED8)', color: '#3B82F6' },
+    { id: 'perfil', label: 'Perfil', icon: '👤', gradient: 'linear-gradient(135deg, #F97316, #EA580C)', color: '#F97316' },
+    { id: 'configuracoes', label: 'Ajustes', icon: '⚙️', gradient: 'linear-gradient(135deg, #EC4899, #BE185D)', color: '#EC4899' }
   ];
 
+  // Treinos com cores laterais bem distintas
   const [workouts, setWorkouts] = useState([
     {
-      id: 'TREINO_A', title: 'Treino A', category: 'Inferiores & Core', color: THEME.accentBlue, icon: '⚡',
+      id: 'TREINO_A', title: 'Treino A', category: 'Inferiores & Core', color: '#00D2FF', icon: '⚡',
       exercises: [
         { id: 'ex_1', name: 'Elevação Pélvica', notes: 'Pausa de 2s no topo', restTime: 60, sets: [
           { id: 1, prev: '20kg x 12', weight: 20, reps: 12, completed: false },
@@ -42,10 +40,26 @@ export default function Home() {
       ]
     },
     {
-      id: 'TREINO_B', title: 'Treino B', category: 'Superiores Completo', color: THEME.accentPurple, icon: '🎯',
+      id: 'TREINO_B', title: 'Treino B', category: 'Superiores Completo', color: '#A855F7', icon: '🎯',
       exercises: [
         { id: 'ex_2', name: 'Desenvolvimento c/ Halteres', notes: 'Cotovelos fechados', restTime: 60, sets: [
           { id: 1, prev: '6kg x 12', weight: 6, reps: 12, completed: false }
+        ]}
+      ]
+    },
+    {
+      id: 'TREINO_C', title: 'Treino C', category: 'Cardio & Abdômen', color: '#10B981', icon: '🏃',
+      exercises: [
+        { id: 'ex_3', name: 'Prancha Frontal', notes: '3 séries de 45s', restTime: 45, sets: [
+          { id: 1, prev: '45s', weight: 0, reps: 45, completed: false }
+        ]}
+      ]
+    },
+    {
+      id: 'TREINO_D', title: 'Treino D', category: 'Core & Mobilidade', color: '#F59E0B', icon: '🤸',
+      exercises: [
+        { id: 'ex_4', name: 'Mobilidade Quadril', notes: 'Execução lenta', restTime: 30, sets: [
+          { id: 1, prev: '12 reps', weight: 0, reps: 12, completed: false }
         ]}
       ]
     }
@@ -77,8 +91,11 @@ export default function Home() {
 
   // LÓGICA DE EDIÇÃO
   const addNewWorkout = () => {
+    const colors = ['#00D2FF', '#A855F7', '#10B981', '#F59E0B', '#EC4899'];
+    const randomColor = colors[workouts.length % colors.length];
+    
     const newWorkout = {
-      id: `W_${Date.now()}`, title: 'Novo Treino', category: 'Foco do dia', color: THEME.accentBlue, icon: '🏋️‍♂️', exercises: []
+      id: `W_${Date.now()}`, title: 'Novo Treino', category: 'Foco do dia', color: randomColor, icon: '🏋️‍♂️', exercises: []
     };
     setWorkouts([...workouts, newWorkout]);
     setActiveWorkout(newWorkout.id);
@@ -100,7 +117,7 @@ export default function Home() {
     setWorkouts(workouts.map(w => w.id === wId ? { ...w, [field]: value } : w));
   };
 
-  // EXECUÇÃO DE TREINOS
+  // EXECUÇÃO
   const handleFinishWorkout = () => {
     setWorkoutSession(null);
     setTotalCompleted(prev => prev + 1);
@@ -148,297 +165,322 @@ export default function Home() {
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: ${THEME.bgMain}; color: ${THEME.textPrimary}; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: ${THEME.bgGradient}; min-height: 100vh; color: #FFF; }
         
-        .app-container { display: flex; min-height: 100vh; flex-direction: column; }
+        .app-container {
+          display: flex;
+          flex-direction: column;
+          min-height: 100vh;
+        }
 
-        /* SIDEBAR (ESTILO IMAGEM 1) */
-        .sidebar {
-          background: ${THEME.bgSidebar}; 
-          padding: 16px; 
-          display: flex; 
-          gap: 6px;
-          justify-content: space-around; 
-          position: fixed; 
-          bottom: 0; 
-          left: 0; 
-          right: 0; 
+        /* NAVEGAÇÃO FIXA INFERIOR */
+        .bottom-nav {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          background: rgba(15, 23, 42, 0.75);
+          backdrop-filter: blur(16px);
+          padding: 12px 16px 20px 16px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 8px;
           z-index: 100;
-          box-shadow: 0 -4px 12px rgba(0,0,0,0.03);
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .nav-btn {
-          display: flex; 
-          align-items: center; 
-          gap: 12px; 
-          padding: 14px 20px;
-          border-radius: 18px; 
-          border: none; 
-          background: transparent; 
-          color: ${THEME.textPrimary};
-          font-size: 0.95rem; 
-          font-weight: 600;
+        /* BOTÕES QUADRADOS DO MENU COM CORES INDIVIDUAIS */
+        .square-nav-btn {
+          width: 58px;
+          height: 58px;
+          border-radius: 18px;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: rgba(255, 255, 255, 0.06);
+          color: #A1A1AA;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 2px;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: all 0.25s ease;
         }
 
-        /* CARD BRANCO ARREDONDADO QUANDO ATIVO (IMAGEM 1) */
-        .nav-btn.active { 
-          background: #FFFFFF; 
-          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
-          font-weight: 800;
+        .square-nav-btn.active {
+          color: #FFFFFF;
+          border: none;
+          box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+          transform: translateY(-2px);
         }
 
-        .main-content { flex: 1; padding: 24px 16px 90px 16px; }
-
-        @media (min-width: 768px) {
-          .app-container { flex-direction: row; }
-          .sidebar { 
-            width: 260px; 
-            position: relative; 
-            flex-direction: column; 
-            justify-content: flex-start; 
-            padding: 40px 18px; 
-            box-shadow: none;
-          }
-          .nav-btn { width: 100%; }
-          .main-content { padding: 48px; }
+        .main-content {
+          flex: 1;
+          padding: 24px 16px 110px 16px;
+          max-width: 480px;
+          margin: 0 auto;
+          width: 100%;
         }
       `}</style>
 
       <div className="app-container">
         
-        {/* BARRA LATERAL / MENU (IMAGEM 1) */}
-        <aside className="sidebar">
-          {navItems.map((item) => (
-            <button 
-              key={item.id} 
-              onClick={() => setActiveTab(item.id)} 
-              className={`nav-btn ${activeTab === item.id ? 'active' : ''}`}
-            >
-              <span style={{ fontSize: '1.2rem' }}>{item.icon}</span>
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </aside>
-
-        {/* ÁREA PRINCIPAL (IMAGEM 2) */}
         <main className="main-content">
-          <div style={{ maxWidth: '640px', margin: '0 auto' }}>
-            
-            {/* HEADER DA IMAGEM 2 */}
-            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+          
+          {/* HEADER */}
+          <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <div>
+              <span style={{ fontSize: '0.7rem', color: '#A855F7', fontWeight: '800', letterSpacing: '1.5px' }}>PRO TRACKER</span>
+              <h1 style={{ fontSize: '1.7rem', color: '#FFF', fontWeight: '800', margin: '2px 0 0 0' }}>Fichas de Treino</h1>
+            </div>
+
+            {/* BADGE DE SESSÕES */}
+            <div style={{ 
+              background: 'rgba(255, 255, 255, 0.1)', 
+              backdropFilter: 'blur(12px)',
+              padding: '8px 14px', 
+              borderRadius: '18px', 
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px'
+            }}>
+              <div style={{ width: '30px', height: '30px', borderRadius: '10px', background: 'linear-gradient(135deg, #A855F7, #EC4899)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', fontWeight: 'bold' }}>
+                ⚡
+              </div>
               <div>
-                <span style={{ fontSize: '0.75rem', color: THEME.accentBlue, fontWeight: '800', letterSpacing: '1px' }}>PRO TRACKER</span>
-                <h1 style={{ fontSize: '1.8rem', color: THEME.textPrimary, fontWeight: '800', margin: '2px 0 0 0' }}>Fichas de Treino</h1>
+                <span style={{ fontSize: '1.1rem', fontWeight: '800', display: 'block', lineHeight: '1', color: '#FFF' }}>{totalCompleted}</span>
+                <span style={{ fontSize: '0.6rem', color: '#C084FC', fontWeight: '700' }}>SESSÕES</span>
               </div>
+            </div>
+          </header>
 
-              {/* CARD DE SESSÕES CONCLUÍDAS */}
-              <div style={{ 
-                background: THEME.cardBg, 
-                padding: '10px 18px', 
-                borderRadius: '20px', 
-                border: `1px solid ${THEME.cardBorder}`,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-              }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: '#EFF6FF', color: THEME.accentBlue, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', fontWeight: 'bold' }}>
-                  ⚡
-                </div>
-                <div>
-                  <span style={{ fontSize: '1.2rem', fontWeight: '800', display: 'block', lineHeight: '1' }}>{totalCompleted}</span>
-                  <span style={{ fontSize: '0.65rem', color: THEME.textSecondary, fontWeight: '700' }}>SESSÕES</span>
-                </div>
-              </div>
-            </header>
-
-            {/* CONTEÚDO DA ABA 'MEUS TREINOS' */}
-            {activeTab === 'meus-treinos' && (
-              <>
-                {/* BOTÃO PERSONALIZAR FICHAS (IMAGEM 2) */}
+          {activeTab === 'meus-treinos' && (
+            <>
+              {/* BOTÃO QUADRADO DE EDITAR TREINOS */}
+              <div style={{ marginBottom: '20px' }}>
                 <button 
                   onClick={() => { setIsEditing(!isEditing); setWorkoutSession(null); }}
                   style={{
-                    width: '100%', 
-                    background: THEME.cardBg, 
-                    color: isEditing ? THEME.accentMint : THEME.textPrimary, 
-                    border: `1px solid ${isEditing ? THEME.accentMint : THEME.cardBorder}`, 
-                    padding: '14px', 
-                    borderRadius: '20px', 
+                    width: '100%',
+                    background: isEditing ? 'linear-gradient(135deg, #10B981, #059669)' : THEME.cardBg, 
+                    color: isEditing ? '#FFF' : THEME.textPrimary, 
+                    border: 'none', 
+                    padding: '16px', 
+                    borderRadius: '22px', 
                     fontWeight: '800', 
-                    fontSize: '0.85rem',
-                    letterSpacing: '0.5px',
                     cursor: 'pointer', 
-                    marginBottom: '20px',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '14px'
+                  }}
+                >
+                  <div style={{
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '14px',
+                    background: isEditing ? 'rgba(255,255,255,0.2)' : 'linear-gradient(135deg, #8B5CF6, #EC4899)',
+                    color: '#FFF',
                     display: 'flex',
                     alignItems: 'center',
                     justify: 'center',
-                    gap: '8px'
-                  }}
-                >
-                  <span>⚙️</span>
-                  <span>{isEditing ? 'SALVAR ALTERAÇÕES' : 'PERSONALIZAR FICHAS'}</span>
-                </button>
-
-                {/* TIMER FLUTUANTE DE DESCANSO */}
-                {restTimer > 0 && !isEditing && (
-                  <div style={{
-                    position: 'fixed', bottom: '85px', left: '50%', transform: 'translateX(-50%)',
-                    background: THEME.accentBlue, color: '#FFF', padding: '10px 24px',
-                    borderRadius: '30px', boxShadow: '0 8px 20px rgba(37,99,235,0.3)', zIndex: 1000, fontWeight: '800'
+                    fontSize: '1.2rem'
                   }}>
-                    ⏳ DESCANSO: {formatTime(restTimer)}
+                    ⚙️
                   </div>
-                )}
+                  <div style={{ textAlign: 'left' }}>
+                    <span style={{ fontSize: '0.9rem', display: 'block', fontWeight: '800' }}>
+                      {isEditing ? 'SALVAR ALTERAÇÕES' : 'PERSONALIZAR FICHAS'}
+                    </span>
+                    <span style={{ fontSize: '0.7rem', color: isEditing ? '#E2E8F0' : THEME.textSecondary, fontWeight: '500' }}>
+                      {isEditing ? 'Concluir modificações' : 'Criar, editar e excluir treinos'}
+                    </span>
+                  </div>
+                </button>
+              </div>
 
-                {/* LISTA DE CARDS DE TREINO */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {workouts.map((w) => {
-                    const isOpen = activeWorkout === w.id || isEditing;
-                    const isRunning = workoutSession?.workoutId === w.id;
+              {/* TIMER FLUTUANTE DE DESCANSO */}
+              {restTimer > 0 && !isEditing && (
+                <div style={{
+                  position: 'fixed', bottom: '95px', left: '50%', transform: 'translateX(-50%)',
+                  background: 'linear-gradient(135deg, #8B5CF6, #3B82F6)', color: '#FFF', padding: '12px 26px',
+                  borderRadius: '30px', boxShadow: '0 10px 25px rgba(139, 92, 246, 0.4)', zIndex: 1000, fontWeight: '800', fontSize: '0.85rem'
+                }}>
+                  ⏳ DESCANSO: {formatTime(restTimer)}
+                </div>
+              )}
 
-                    return (
-                      <div key={w.id} style={{
-                        position: 'relative', 
-                        background: THEME.cardBg, 
-                        borderRadius: '24px',
-                        border: `1px solid ${THEME.cardBorder}`, 
-                        overflow: 'hidden',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
-                      }}>
-                        
-                        {/* BARRINHA LATERAL DE STATUS (IMAGEM 2) */}
-                        <div style={{ 
-                          position: 'absolute', 
-                          top: 0, 
-                          left: 0, 
-                          bottom: 0, 
-                          width: '6px', 
-                          background: isRunning ? THEME.accentMint : w.color,
-                          borderRadius: '6px 0 0 6px'
-                        }} />
+              {/* CARDS DE TREINO COM COR LATERAL DIFERENCIADA */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {workouts.map((w) => {
+                  const isOpen = activeWorkout === w.id || isEditing;
+                  const isRunning = workoutSession?.workoutId === w.id;
 
-                        {/* CABEÇALHO DO CARD DE TREINO */}
-                        <div 
-                          onClick={() => !isEditing && setActiveWorkout(isOpen ? null : w.id)}
-                          style={{ padding: '20px 20px 20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
-                            <div style={{ 
-                              width: '46px', height: '46px', borderRadius: '16px', 
-                              background: `${w.color}15`, color: w.color, 
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' 
-                            }}>
-                              {w.icon}
-                            </div>
-                            <div>
-                              {isEditing ? (
-                                <>
-                                  <input value={w.title} onChange={(e) => updateWorkoutField(w.id, 'title', e.target.value)} style={{ background: 'transparent', border: '1px dashed #CBD5E1', fontWeight: 'bold', fontSize: '1rem', outline: 'none' }} />
-                                  <input value={w.category} onChange={(e) => updateWorkoutField(w.id, 'category', e.target.value)} style={{ background: 'transparent', border: '1px dashed #CBD5E1', fontSize: '0.8rem', color: THEME.textSecondary, outline: 'none', display: 'block' }} />
-                                </>
-                              ) : (
-                                <>
-                                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '800', color: THEME.textPrimary }}>{w.title}</h3>
-                                  <span style={{ fontSize: '0.8rem', color: THEME.textSecondary, fontWeight: '500' }}>{w.category}</span>
-                                </>
-                              )}
-                            </div>
+                  return (
+                    <div key={w.id} style={{
+                      position: 'relative', 
+                      background: THEME.cardBg, 
+                      borderRadius: '24px',
+                      overflow: 'hidden',
+                      boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+                      color: THEME.textPrimary
+                    }}>
+                      
+                      {/* BARRINHA LATERAL COM COR ÚNICA PARA CADA TREINO */}
+                      <div style={{ 
+                        position: 'absolute', 
+                        top: 0, 
+                        left: 0, 
+                        bottom: 0, 
+                        width: '8px', 
+                        background: isRunning ? '#10B981' : w.color
+                      }} />
+
+                      {/* CABEÇALHO DO CARD */}
+                      <div 
+                        onClick={() => !isEditing && setActiveWorkout(isOpen ? null : w.id)}
+                        style={{ padding: '20px 20px 20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1 }}>
+                          <div style={{ 
+                            width: '46px', height: '46px', borderRadius: '16px', 
+                            background: `${w.color}20`, color: w.color, 
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: 'bold' 
+                          }}>
+                            {w.icon}
                           </div>
-
-                          {isEditing && (
-                            <button onClick={() => deleteWorkout(w.id)} style={{ background: '#FEE2E2', color: '#EF4444', border: 'none', width: '32px', height: '32px', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' }}>✕</button>
-                          )}
+                          <div>
+                            {isEditing ? (
+                              <>
+                                <input value={w.title} onChange={(e) => updateWorkoutField(w.id, 'title', e.target.value)} style={{ background: 'transparent', border: '1px dashed #CBD5E1', fontWeight: '800', fontSize: '1rem', outline: 'none', width: '100%', color: THEME.textPrimary }} />
+                                <input value={w.category} onChange={(e) => updateWorkoutField(w.id, 'category', e.target.value)} style={{ background: 'transparent', border: '1px dashed #CBD5E1', fontSize: '0.75rem', color: THEME.textSecondary, outline: 'none', width: '100%', display: 'block' }} />
+                              </>
+                            ) : (
+                              <>
+                                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '800', color: THEME.textPrimary }}>{w.title}</h3>
+                                <span style={{ fontSize: '0.8rem', color: THEME.textSecondary, fontWeight: '600' }}>{w.category}</span>
+                              </>
+                            )}
+                          </div>
                         </div>
 
-                        {/* EXERCÍCIOS E DETALHES DO TREINO */}
-                        {isOpen && (
-                          <div style={{ padding: '0 20px 20px 24px', borderTop: `1px solid ${THEME.cardBorder}`, paddingTop: '18px' }}>
-                            {!isEditing && (
-                              <button 
-                                onClick={() => isRunning ? handleFinishWorkout() : setWorkoutSession({ workoutId: w.id, seconds: 0 })}
-                                style={{
-                                  width: '100%', padding: '12px', borderRadius: '14px',
-                                  background: isRunning ? THEME.accentMint : w.color, color: '#FFF', border: 'none', fontWeight: '800', cursor: 'pointer', marginBottom: '16px'
-                                }}
-                              >
-                                {isRunning ? `✓ CONCLUIR SESSÃO (${formatTime(workoutSession.seconds)})` : '▶ INICIAR SESSÃO'}
-                              </button>
-                            )}
-
-                            {w.exercises.map((ex) => (
-                              <div key={ex.id} style={{ background: THEME.inputBg, padding: '14px', borderRadius: '16px', marginBottom: '14px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                                  {isEditing ? (
-                                    <input value={ex.name} onChange={(e) => updateExerciseField(w.id, ex.id, 'name', e.target.value)} style={{ background: 'transparent', border: '1px dashed #CBD5E1', fontWeight: 'bold', outline: 'none' }} />
-                                  ) : (
-                                    <h4 style={{ margin: 0, color: w.color, fontSize: '0.95rem', fontWeight: '700' }}>{ex.name}</h4>
-                                  )}
-                                  {isEditing && <button onClick={() => deleteExercise(w.id, ex.id)} style={{ background: 'transparent', color: '#EF4444', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}>Excluir</button>}
-                                </div>
-
-                                <input type="text" value={ex.notes} onChange={(e) => updateExerciseField(w.id, ex.id, 'notes', e.target.value)} placeholder="Anotações..." readOnly={!isEditing} style={{ width: '100%', background: 'transparent', border: 'none', fontSize: '0.8rem', color: THEME.textSecondary, marginBottom: '10px', outline: 'none' }} />
-
-                                {/* TABELA DE SÉRIES */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 1fr 1fr 32px', gap: '6px', fontSize: '0.65rem', color: THEME.textSecondary, fontWeight: '700', textAlign: 'center', marginBottom: '6px' }}>
-                                  <span>SET</span><span>ANT.</span><span>KG</span><span>REPS</span><span>✓</span>
-                                </div>
-
-                                {ex.sets.map((set, idx) => (
-                                  <div key={set.id} style={{ display: 'grid', gridTemplateColumns: '28px 1fr 1fr 1fr 32px', gap: '6px', alignItems: 'center', marginBottom: '6px', textAlign: 'center' }}>
-                                    <span style={{ fontSize: '0.8rem', fontWeight: '800', color: set.completed ? THEME.accentMint : THEME.textPrimary }}>{set.id}</span>
-                                    <span style={{ fontSize: '0.7rem', color: THEME.textSecondary }}>{set.prev}</span>
-                                    <input type="number" value={set.weight} onChange={(e) => updateSetData(w.id, ex.id, idx, 'weight', e.target.value)} readOnly={!isEditing && set.completed} style={{ width: '100%', textAlign: 'center', padding: '6px 2px', borderRadius: '8px', background: '#FFFFFF', border: `1px solid ${THEME.cardBorder}`, fontWeight: '700' }} />
-                                    <input type="number" value={set.reps} onChange={(e) => updateSetData(w.id, ex.id, idx, 'reps', e.target.value)} readOnly={!isEditing && set.completed} style={{ width: '100%', textAlign: 'center', padding: '6px 2px', borderRadius: '8px', background: '#FFFFFF', border: `1px solid ${THEME.cardBorder}`, fontWeight: '700' }} />
-                                    
-                                    <div onClick={() => toggleSetComplete(w.id, ex.id, idx, ex.restTime)} style={{
-                                      width: '28px', height: '28px', borderRadius: '8px', margin: '0 auto',
-                                      background: set.completed ? THEME.accentMint : '#FFFFFF', border: `1px solid ${set.completed ? THEME.accentMint : THEME.cardBorder}`,
-                                      display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
-                                    }}>
-                                      {set.completed && <span style={{ color: '#FFF', fontWeight: 'bold', fontSize: '0.75rem' }}>✓</span>}
-                                    </div>
-                                  </div>
-                                ))}
-
-                                <button onClick={() => addSet(w.id, ex.id)} style={{ width: '100%', marginTop: '6px', padding: '8px', background: 'transparent', border: `1px dashed ${THEME.cardBorder}`, color: THEME.textSecondary, borderRadius: '8px', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>
-                                  + Adicionar Série
-                                </button>
-                              </div>
-                            ))}
-
-                            {isEditing && (
-                              <button onClick={() => addNewExercise(w.id)} style={{ width: '100%', padding: '10px', background: '#ECFDF5', color: THEME.accentMint, border: `1px dashed ${THEME.accentMint}`, borderRadius: '12px', fontWeight: 'bold', fontSize: '0.85rem', cursor: 'pointer' }}>
-                                + ADICIONAR EXERCÍCIO
-                              </button>
-                            )}
-                          </div>
+                        {isEditing && (
+                          <button onClick={() => deleteWorkout(w.id)} style={{ background: '#FEE2E2', color: '#EF4444', border: 'none', width: '34px', height: '34px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}>✕</button>
                         )}
                       </div>
-                    );
-                  })}
 
-                  {isEditing && (
-                    <button onClick={addNewWorkout} style={{ width: '100%', padding: '16px', background: 'transparent', color: THEME.accentBlue, border: `2px dashed ${THEME.accentBlue}`, borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' }}>
-                      + CRIAR NOVO TREINO
-                    </button>
-                  )}
-                </div>
-              </>
-            )}
+                      {/* EXERCÍCIOS */}
+                      {isOpen && (
+                        <div style={{ padding: '0 20px 20px 24px', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
+                          {!isEditing && (
+                            <button 
+                              onClick={() => isRunning ? handleFinishWorkout() : setWorkoutSession({ workoutId: w.id, seconds: 0 })}
+                              style={{
+                                width: '100%', padding: '14px', borderRadius: '16px',
+                                background: isRunning ? '#10B981' : w.color, color: '#FFF', border: 'none', fontWeight: '800', cursor: 'pointer', marginBottom: '16px', fontSize: '0.85rem',
+                                boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
+                              }}
+                            >
+                              {isRunning ? `✓ CONCLUIR SESSÃO (${formatTime(workoutSession.seconds)})` : '▶ INICIAR SESSÃO'}
+                            </button>
+                          )}
 
-            {/* DEMAIS ABAS */}
-            {activeTab !== 'meus-treinos' && (
-              <div style={{ background: THEME.cardBg, padding: '40px', borderRadius: '24px', border: `1px solid ${THEME.cardBorder}`, textAlign: 'center', color: THEME.textSecondary }}>
-                Página de <strong>{activeTab.toUpperCase()}</strong> em desenvolvimento.
+                          {w.exercises.map((ex) => (
+                            <div key={ex.id} style={{ background: THEME.inputBg, padding: '14px', borderRadius: '18px', marginBottom: '12px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                {isEditing ? (
+                                  <input value={ex.name} onChange={(e) => updateExerciseField(w.id, ex.id, 'name', e.target.value)} style={{ background: 'transparent', border: '1px dashed #CBD5E1', fontWeight: 'bold', outline: 'none', color: THEME.textPrimary }} />
+                                ) : (
+                                  <h4 style={{ margin: 0, color: w.color, fontSize: '0.95rem', fontWeight: '800' }}>{ex.name}</h4>
+                                )}
+                                {isEditing && <button onClick={() => deleteExercise(w.id, ex.id)} style={{ background: 'transparent', color: '#EF4444', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}>Excluir</button>}
+                              </div>
+
+                              <input type="text" value={ex.notes} onChange={(e) => updateExerciseField(w.id, ex.id, 'notes', e.target.value)} placeholder="Anotações..." readOnly={!isEditing} style={{ width: '100%', background: 'transparent', border: 'none', fontSize: '0.75rem', color: THEME.textSecondary, marginBottom: '8px', outline: 'none' }} />
+
+                              {/* TABELA DE SÉRIES */}
+                              <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 1fr 1fr 32px', gap: '6px', fontSize: '0.65rem', color: THEME.textSecondary, fontWeight: '700', textAlign: 'center', marginBottom: '6px' }}>
+                                <span>SET</span><span>ANT.</span><span>KG</span><span>REPS</span><span>✓</span>
+                              </div>
+
+                              {ex.sets.map((set, idx) => (
+                                <div key={set.id} style={{ display: 'grid', gridTemplateColumns: '28px 1fr 1fr 1fr 32px', gap: '6px', alignItems: 'center', marginBottom: '6px', textAlign: 'center' }}>
+                                  <span style={{ fontSize: '0.8rem', fontWeight: '800', color: set.completed ? '#10B981' : THEME.textPrimary }}>{set.id}</span>
+                                  <span style={{ fontSize: '0.7rem', color: THEME.textSecondary }}>{set.prev}</span>
+                                  <input type="number" value={set.weight} onChange={(e) => updateSetData(w.id, ex.id, idx, 'weight', e.target.value)} readOnly={!isEditing && set.completed} style={{ width: '100%', textAlign: 'center', padding: '6px 2px', borderRadius: '8px', background: '#FFFFFF', border: '1px solid #CBD5E1', fontWeight: '700', fontSize: '0.8rem', color: THEME.textPrimary }} />
+                                  <input type="number" value={set.reps} onChange={(e) => updateSetData(w.id, ex.id, idx, 'reps', e.target.value)} readOnly={!isEditing && set.completed} style={{ width: '100%', textAlign: 'center', padding: '6px 2px', borderRadius: '8px', background: '#FFFFFF', border: '1px solid #CBD5E1', fontWeight: '700', fontSize: '0.8rem', color: THEME.textPrimary }} />
+                                  
+                                  <div onClick={() => toggleSetComplete(w.id, ex.id, idx, ex.restTime)} style={{
+                                    width: '28px', height: '28px', borderRadius: '8px', margin: '0 auto',
+                                    background: set.completed ? '#10B981' : '#FFFFFF', border: `1px solid ${set.completed ? '#10B981' : '#CBD5E1'}`,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+                                  }}>
+                                    {set.completed && <span style={{ color: '#FFF', fontWeight: 'bold', fontSize: '0.75rem' }}>✓</span>}
+                                  </div>
+                                </div>
+                              ))}
+
+                              <button onClick={() => addSet(w.id, ex.id)} style={{ width: '100%', marginTop: '6px', padding: '6px', background: 'transparent', border: '1px dashed #CBD5E1', color: THEME.textSecondary, borderRadius: '8px', fontSize: '0.7rem', cursor: 'pointer', fontWeight: '600' }}>
+                                + Adicionar Série
+                              </button>
+                            </div>
+                          ))}
+
+                          {isEditing && (
+                            <button onClick={() => addNewExercise(w.id)} style={{ width: '100%', padding: '10px', background: '#ECFDF5', color: '#059669', border: '1px dashed #059669', borderRadius: '12px', fontWeight: 'bold', fontSize: '0.8rem', cursor: 'pointer' }}>
+                              + ADICIONAR EXERCÍCIO
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {isEditing && (
+                  <button onClick={addNewWorkout} style={{ width: '100%', padding: '16px', background: 'rgba(255,255,255,0.1)', color: '#FFF', border: '2px dashed rgba(255,255,255,0.4)', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem' }}>
+                    + CRIAR NOVO TREINO
+                  </button>
+                )}
               </div>
-            )}
+            </>
+          )}
 
-          </div>
+          {activeTab !== 'meus-treinos' && (
+            <div style={{ background: THEME.cardBg, padding: '40px 20px', borderRadius: '24px', textAlign: 'center', color: THEME.textSecondary }}>
+              Página de <strong style={{ color: THEME.textPrimary }}>{activeTab.toUpperCase()}</strong> em desenvolvimento.
+            </div>
+          )}
+
         </main>
+
+        {/* NAVEGAÇÃO FIXA INFERIOR COM BOTÕES QUADRADOS E CORES INDIVIDUAIS */}
+        <nav className="bottom-nav">
+          {navItems.map((item) => {
+            const isActive = activeTab === item.id;
+
+            return (
+              <button 
+                key={item.id} 
+                onClick={() => setActiveTab(item.id)} 
+                className={`square-nav-btn ${isActive ? 'active' : ''}`}
+                style={{
+                  background: isActive ? item.gradient : 'rgba(255, 255, 255, 0.06)'
+                }}
+              >
+                <span style={{ fontSize: '1.2rem' }}>{item.icon}</span>
+                <span style={{ 
+                  fontSize: '0.65rem', 
+                  fontWeight: isActive ? '800' : '600',
+                  color: isActive ? '#FFF' : '#A1A1AA' 
+                }}>
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
 
       </div>
     </>
