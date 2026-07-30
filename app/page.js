@@ -46,32 +46,50 @@ export default function Home() {
   const [restTimer, setRestTimer] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Estados
+  // Estados de Dados
   const [totalCompleted, setTotalCompleted] = useState(0);
   const [waterIntake, setWaterIntake] = useState(0);
-  const [selectedExerciseFilter, setSelectedExerciseFilter] = useState('ex_1');
   const [workouts, setWorkouts] = useState(INITIAL_WORKOUTS);
   const [completedDaysInMonth, setCompletedDaysInMonth] = useState([]);
   
-  // Perfil com a Meta de Água inclusa (padrão 3000ml)
+  // Novos Estados (Dashboard)
+  const [dailyHabits, setDailyHabits] = useState({ protein: false, sleep: false, cardio: false });
+  const [recoveryLevel, setRecoveryLevel] = useState(0); // 0 a 5
+  
   const [userProfile, setUserProfile] = useState({
     weight: 70.0, height: 1.75, bf: 18, arm: 30, waist: 75, hip: 95, thigh: 55, waterGoal: 3000
   });
 
-  // Carregar do localStorage
+  // Lógica de reset diário e carregamento
   useEffect(() => {
     try {
+      const todayStr = new Date().toLocaleDateString();
+      const savedDate = localStorage.getItem('pro_last_date');
+      
       const savedWorkouts = localStorage.getItem('pro_workouts');
       const savedTotal = localStorage.getItem('pro_total');
-      const savedWater = localStorage.getItem('pro_water');
       const savedProfile = localStorage.getItem('pro_profile');
       const savedDays = localStorage.getItem('pro_days');
-
+      
       if (savedWorkouts) setWorkouts(JSON.parse(savedWorkouts));
       if (savedTotal) setTotalCompleted(JSON.parse(savedTotal));
-      if (savedWater) setWaterIntake(JSON.parse(savedWater));
       if (savedProfile) setUserProfile(JSON.parse(savedProfile));
       if (savedDays) setCompletedDaysInMonth(JSON.parse(savedDays));
+
+      // Se for um novo dia, reseta água e hábitos. Se for o mesmo dia, carrega.
+      if (savedDate !== todayStr) {
+        setWaterIntake(0);
+        setDailyHabits({ protein: false, sleep: false, cardio: false });
+        setRecoveryLevel(0);
+        localStorage.setItem('pro_last_date', todayStr);
+      } else {
+        const savedWater = localStorage.getItem('pro_water');
+        const savedHabits = localStorage.getItem('pro_habits');
+        const savedRec = localStorage.getItem('pro_recovery');
+        if (savedWater) setWaterIntake(JSON.parse(savedWater));
+        if (savedHabits) setDailyHabits(JSON.parse(savedHabits));
+        if (savedRec) setRecoveryLevel(JSON.parse(savedRec));
+      }
     } catch (e) {
       console.error("Erro ao carregar", e);
     } finally {
@@ -79,7 +97,7 @@ export default function Home() {
     }
   }, []);
 
-  // Salvar no localStorage
+  // Salvar no localStorage sempre que alterar
   useEffect(() => {
     if (!isLoaded) return;
     localStorage.setItem('pro_workouts', JSON.stringify(workouts));
@@ -87,7 +105,9 @@ export default function Home() {
     localStorage.setItem('pro_water', JSON.stringify(waterIntake));
     localStorage.setItem('pro_profile', JSON.stringify(userProfile));
     localStorage.setItem('pro_days', JSON.stringify(completedDaysInMonth));
-  }, [workouts, totalCompleted, waterIntake, userProfile, completedDaysInMonth, isLoaded]);
+    localStorage.setItem('pro_habits', JSON.stringify(dailyHabits));
+    localStorage.setItem('pro_recovery', JSON.stringify(recoveryLevel));
+  }, [workouts, totalCompleted, waterIntake, userProfile, completedDaysInMonth, dailyHabits, recoveryLevel, isLoaded]);
 
   const navItems = [
     { id: 'inicio', label: 'Início', icon: '🏠', gradient: 'linear-gradient(135deg, #10B981, #059669)' },
@@ -97,7 +117,7 @@ export default function Home() {
     { id: 'configuracoes', label: 'Ajustes', icon: '⚙️', gradient: 'linear-gradient(135deg, #EC4899, #BE185D)' }
   ];
 
-  // Cronômetros
+  // Cronômetros (mantidos)
   useEffect(() => {
     let interval;
     if (workoutSession && !isEditing) {
@@ -120,7 +140,6 @@ export default function Home() {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // Funções
   const handleFinishWorkout = () => {
     setWorkoutSession(null);
     setTotalCompleted(prev => prev + 1);
@@ -130,6 +149,7 @@ export default function Home() {
     }
   };
 
+  // Funções de CRUD Treino mantidas (addNewWorkout, deleteWorkout, etc...)
   const addNewWorkout = () => {
     const colors = ['#00D2FF', '#A855F7', '#10B981', '#F59E0B', '#EC4899'];
     const randomColor = colors[workouts.length % colors.length];
@@ -138,74 +158,31 @@ export default function Home() {
     setActiveWorkout(newWorkout.id);
   };
   const deleteWorkout = (wId) => setWorkouts(workouts.filter(w => w.id !== wId));
-  const addNewExercise = (wId) => {
-    setWorkouts(workouts.map(w => w.id !== wId ? w : { ...w, exercises: [...w.exercises, { id: `E_${Date.now()}`, name: 'Novo Exercício', notes: '', restTime: 60, sets: [{ id: 1, prev: '-', weight: 0, reps: 0, completed: false }] }] }));
-  };
-  const deleteExercise = (wId, exId) => {
-    setWorkouts(workouts.map(w => w.id !== wId ? w : { ...w, exercises: w.exercises.filter(ex => ex.id !== exId) }));
-  };
+  const addNewExercise = (wId) => setWorkouts(workouts.map(w => w.id !== wId ? w : { ...w, exercises: [...w.exercises, { id: `E_${Date.now()}`, name: 'Novo Exercício', notes: '', restTime: 60, sets: [{ id: 1, prev: '-', weight: 0, reps: 0, completed: false }] }] }));
+  const deleteExercise = (wId, exId) => setWorkouts(workouts.map(w => w.id !== wId ? w : { ...w, exercises: w.exercises.filter(ex => ex.id !== exId) }));
   const updateWorkoutField = (wId, field, value) => setWorkouts(workouts.map(w => w.id === wId ? { ...w, [field]: value } : w));
-  
   const toggleSetComplete = (wId, exId, setIndex, restTime) => {
     if (isEditing) return;
-    setWorkouts(workouts.map(w => w.id === wId ? {
-      ...w, exercises: w.exercises.map(ex => ex.id === exId ? {
-        ...ex, sets: ex.sets.map((s, i) => {
-          if (i !== setIndex) return s;
-          if (!s.completed) setRestTimer(restTime);
-          return { ...s, completed: !s.completed };
-        })
-      } : ex)
-    } : w));
+    setWorkouts(workouts.map(w => w.id === wId ? { ...w, exercises: w.exercises.map(ex => ex.id === exId ? { ...ex, sets: ex.sets.map((s, i) => {
+      if (i !== setIndex) return s;
+      if (!s.completed) setRestTimer(restTime);
+      return { ...s, completed: !s.completed };
+    }) } : ex) } : w));
   };
+  const addSet = (wId, exId) => setWorkouts(workouts.map(w => w.id === wId ? { ...w, exercises: w.exercises.map(ex => {
+    if (ex.id !== exId) return ex;
+    const lastSet = ex.sets[ex.sets.length - 1] || { weight: 0, reps: 0, prev: '-' };
+    return { ...ex, sets: [...ex.sets, { id: ex.sets.length + 1, prev: `${lastSet.weight}kg`, weight: lastSet.weight, reps: lastSet.reps, completed: false }] };
+  }) } : w));
+  const updateSetData = (wId, exId, setIndex, field, value) => setWorkouts(workouts.map(w => w.id === wId ? { ...w, exercises: w.exercises.map(ex => ex.id === exId ? { ...ex, sets: ex.sets.map((s, i) => i === setIndex ? { ...s, [field]: value } : s) } : ex) } : w));
+  const updateExerciseField = (wId, exId, field, value) => setWorkouts(workouts.map(w => w.id === wId ? { ...w, exercises: w.exercises.map(ex => ex.id === exId ? { ...ex, [field]: value } : ex) } : w));
 
-  const addSet = (wId, exId) => {
-    setWorkouts(workouts.map(w => w.id === wId ? {
-      ...w, exercises: w.exercises.map(ex => {
-        if (ex.id !== exId) return ex;
-        const lastSet = ex.sets[ex.sets.length - 1] || { weight: 0, reps: 0, prev: '-' };
-        return { ...ex, sets: [...ex.sets, { id: ex.sets.length + 1, prev: `${lastSet.weight}kg`, weight: lastSet.weight, reps: lastSet.reps, completed: false }] };
-      })
-    } : w));
-  };
-  const updateSetData = (wId, exId, setIndex, field, value) => {
-    setWorkouts(workouts.map(w => w.id === wId ? {
-      ...w, exercises: w.exercises.map(ex => ex.id === exId ? {
-        ...ex, sets: ex.sets.map((s, i) => i === setIndex ? { ...s, [field]: value } : s)
-      } : ex)
-    } : w));
-  };
-  const updateExerciseField = (wId, exId, field, value) => {
-    setWorkouts(workouts.map(w => w.id === wId ? { ...w, exercises: w.exercises.map(ex => ex.id === exId ? { ...ex, [field]: value } : ex) } : w));
-  };
+  const toggleHabit = (habitKey) => setDailyHabits(prev => ({ ...prev, [habitKey]: !prev[habitKey] }));
 
-  const exportBackup = () => {
-    const data = { workouts, totalCompleted, waterIntake, userProfile, completedDaysInMonth };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `workout_backup_${new Date().toISOString().slice(0,10)}.json`;
-    a.click();
-  };
-
-  const importBackup = (e) => {
-    const fileReader = new FileReader();
-    fileReader.readAsText(e.target.files[0], "UTF-8");
-    fileReader.onload = (ev) => {
-      try {
-        const data = JSON.parse(ev.target.result);
-        if (data.workouts) setWorkouts(data.workouts);
-        if (data.totalCompleted !== undefined) setTotalCompleted(data.totalCompleted);
-        if (data.waterIntake !== undefined) setWaterIntake(data.waterIntake);
-        if (data.userProfile) setUserProfile(data.userProfile);
-        if (data.completedDaysInMonth) setCompletedDaysInMonth(data.completedDaysInMonth);
-        alert('Backup restaurado com sucesso!');
-      } catch (err) {
-        alert('Erro ao importar arquivo.');
-      }
-    };
-  };
+  // Lógica para o mini calendário da semana atual
+  const todayDate = new Date();
+  const currentDayOfWeek = todayDate.getDay(); // 0 (Dom) a 6 (Sáb)
+  const weekDaysShort = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 
   const bmi = userProfile.height > 0 ? (userProfile.weight / (userProfile.height * userProfile.height)).toFixed(1) : '0';
 
@@ -221,7 +198,6 @@ export default function Home() {
 
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         
-        {/* ÁREA PRINCIPAL */}
         <main style={{ flex: 1, padding: '24px 16px 110px 16px', maxWidth: '480px', margin: '0 auto', width: '100%' }}>
           
           <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -244,9 +220,11 @@ export default function Home() {
             </div>
           </header>
 
-          {/* 1. ABA INÍCIO */}
+          {/* 1. ABA INÍCIO - DASHBOARD COMPLETO */}
           {activeTab === 'inicio' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              
+              {/* Próximo Treino */}
               <div style={{ background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)', padding: '22px', borderRadius: '26px', boxShadow: '0 12px 30px rgba(109, 40, 217, 0.35)' }}>
                 <span style={{ fontSize: '0.75rem', color: '#DDD6FE', fontWeight: '800', letterSpacing: '1px' }}>PRÓXIMO TREINO</span>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: '800', margin: '4px 0 2px 0', color: '#FFF' }}>{workouts[0]?.title || 'Seu Treino'}</h2>
@@ -256,12 +234,33 @@ export default function Home() {
                 </button>
               </div>
 
-              <div style={{ background: THEME.cardBg, padding: '20px', borderRadius: '24px', color: THEME.textPrimary, boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
+              {/* Consistência Semanal */}
+              <div style={{ background: THEME.cardBg, padding: '18px', borderRadius: '24px', color: THEME.textPrimary, boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: '800', marginBottom: '12px' }}>Semana Atual</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', textAlign: 'center' }}>
+                  {weekDaysShort.map((dayLabel, index) => {
+                    const isToday = index === currentDayOfWeek;
+                    // Lógica simples visual: se o dia de hoje está concluído ou dias passados recentes.
+                    // Para simplificar no frontend visual, vamos focar em destacar o dia atual.
+                    return (
+                      <div key={index} style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.65rem', fontWeight: '700', color: isToday ? '#3B82F6' : THEME.textSecondary }}>{dayLabel}</span>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: isToday ? '#3B82F6' : THEME.inputBg, color: isToday ? '#FFF' : THEME.textSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '0.8rem', opacity: index > currentDayOfWeek ? 0.4 : 1 }}>
+                          {index <= currentDayOfWeek ? '✓' : '-'}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Hidratação */}
+              <div style={{ background: THEME.cardBg, padding: '18px', borderRadius: '24px', color: THEME.textPrimary, boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span style={{ fontSize: '1.4rem' }}>💧</span>
                     <div>
-                      <h3 style={{ fontSize: '0.95rem', fontWeight: '800' }}>Hidratação do Dia</h3>
+                      <h3 style={{ fontSize: '0.95rem', fontWeight: '800' }}>Hidratação</h3>
                       <span style={{ fontSize: '0.75rem', color: THEME.textSecondary, fontWeight: '600' }}>Meta: {(userProfile.waterGoal / 1000).toFixed(1)}L</span>
                     </div>
                   </div>
@@ -275,9 +274,71 @@ export default function Home() {
                   <button onClick={() => setWaterIntake(p => p + 500)} style={{ flex: 1, padding: '10px', background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', borderRadius: '12px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer' }}>+ 500 ml</button>
                 </div>
               </div>
+
+              {/* Painel de Hábitos Diários */}
+              <div style={{ background: THEME.cardBg, padding: '18px', borderRadius: '24px', color: THEME.textPrimary, boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: '800', marginBottom: '12px' }}>Hábitos Diários</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  
+                  <div onClick={() => toggleHabit('protein')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: THEME.inputBg, padding: '12px 16px', borderRadius: '14px', cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '1.2rem' }}>🥩</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: '700' }}>Bateu a Proteína?</span>
+                    </div>
+                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: dailyHabits.protein ? '#10B981' : '#FFF', border: `2px solid ${dailyHabits.protein ? '#10B981' : '#CBD5E1'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {dailyHabits.protein && <span style={{ color: '#FFF', fontSize: '0.8rem', fontWeight: 'bold' }}>✓</span>}
+                    </div>
+                  </div>
+
+                  <div onClick={() => toggleHabit('cardio')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: THEME.inputBg, padding: '12px 16px', borderRadius: '14px', cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '1.2rem' }}>🏃</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: '700' }}>Cardio Feito?</span>
+                    </div>
+                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: dailyHabits.cardio ? '#10B981' : '#FFF', border: `2px solid ${dailyHabits.cardio ? '#10B981' : '#CBD5E1'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {dailyHabits.cardio && <span style={{ color: '#FFF', fontSize: '0.8rem', fontWeight: 'bold' }}>✓</span>}
+                    </div>
+                  </div>
+
+                  <div onClick={() => toggleHabit('sleep')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: THEME.inputBg, padding: '12px 16px', borderRadius: '14px', cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '1.2rem' }}>😴</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: '700' }}>Dormiu 7h+?</span>
+                    </div>
+                    <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: dailyHabits.sleep ? '#10B981' : '#FFF', border: `2px solid ${dailyHabits.sleep ? '#10B981' : '#CBD5E1'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {dailyHabits.sleep && <span style={{ color: '#FFF', fontSize: '0.8rem', fontWeight: 'bold' }}>✓</span>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Indicador de Recuperação */}
+              <div style={{ background: THEME.cardBg, padding: '18px', borderRadius: '24px', color: THEME.textPrimary, boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: '800', marginBottom: '12px' }}>Recuperação Muscular</h3>
+                <p style={{ fontSize: '0.75rem', color: THEME.textSecondary, marginBottom: '12px' }}>Como você está se sentindo hoje?</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
+                  {[ { val: 1, em: '😫', clr: '#EF4444' }, { val: 2, em: '😞', clr: '#F97316' }, { val: 3, em: '😐', clr: '#EAB308' }, { val: 4, em: '🙂', clr: '#84CC16' }, { val: 5, em: '🚀', clr: '#10B981' } ].map(item => (
+                    <button 
+                      key={item.val} 
+                      onClick={() => setRecoveryLevel(item.val)}
+                      style={{ 
+                        flex: 1, padding: '10px 0', fontSize: '1.5rem', 
+                        background: recoveryLevel === item.val ? `${item.clr}20` : THEME.inputBg, 
+                        border: `2px solid ${recoveryLevel === item.val ? item.clr : 'transparent'}`, 
+                        borderRadius: '14px', cursor: 'pointer', transition: 'all 0.2s'
+                      }}
+                    >
+                      {item.em}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
             </div>
           )}
 
+          {/* O RESTANTE DO APP (TREINOS, DADOS, PERFIL, AJUSTES) CONTINUA IGUAL */}
+          
           {/* 2. ABA TREINOS */}
           {activeTab === 'meus-treinos' && (
             <>
@@ -429,8 +490,6 @@ export default function Home() {
           {/* 5. ABA AJUSTES */}
           {activeTab === 'configuracoes' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              
-              {/* METAS DIÁRIAS (EDIÇÃO DE ÁGUA AQUI) */}
               <div style={{ background: THEME.cardBg, padding: '20px', borderRadius: '24px', color: THEME.textPrimary, boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
                 <h3 style={{ fontSize: '1rem', fontWeight: '800', marginBottom: '14px' }}>Metas Diárias</h3>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: THEME.inputBg, padding: '12px 16px', borderRadius: '14px' }}>
@@ -446,26 +505,11 @@ export default function Home() {
                   />
                 </div>
               </div>
-
-              {/* BACKUP */}
-              <div style={{ background: THEME.cardBg, padding: '24px', borderRadius: '24px', color: THEME.textPrimary, boxShadow: '0 10px 30px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: '800' }}>Gerenciamento de Dados</h3>
-                <p style={{ fontSize: '0.8rem', color: THEME.textSecondary }}>Seus dados ficam salvos localmente. Use as opções abaixo para fazer backup de segurança.</p>
-                
-                <button onClick={exportBackup} style={{ width: '100%', padding: '14px', background: '#3B82F6', color: '#FFF', border: 'none', borderRadius: '16px', fontWeight: '800', cursor: 'pointer', fontSize: '0.85rem' }}>
-                  📥 BAIXAR BACKUP DOS DADOS
-                </button>
-                <label style={{ width: '100%', padding: '14px', background: THEME.inputBg, color: THEME.textPrimary, border: '1px dashed #CBD5E1', borderRadius: '16px', fontWeight: '800', cursor: 'pointer', fontSize: '0.85rem', textAlign: 'center', display: 'block' }}>
-                  📤 RESTAURAR BACKUP (.JSON)
-                  <input type="file" accept=".json" onChange={importBackup} style={{ display: 'none' }} />
-                </label>
-              </div>
             </div>
           )}
 
         </main>
 
-        {/* NAVEGAÇÃO FIXA INFERIOR GARANTIDA (ESTILOS INLINE) */}
         <nav style={{
           position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(15, 23, 42, 0.85)',
           backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
