@@ -35,14 +35,6 @@ const INITIAL_WORKOUTS = [
         { id: 1, prev: '-', weight: 0, reps: 45, completed: false }
       ]}
     ]
-  },
-  {
-    id: 'TREINO_D', title: 'Treino D', category: 'Core & Mobilidade', color: '#F59E0B', icon: '🤸',
-    exercises: [
-      { id: 'ex_4', name: 'Mobilidade Quadril', notes: 'Execução lenta', restTime: 30, sets: [
-        { id: 1, prev: '-', weight: 0, reps: 12, completed: false }
-      ]}
-    ]
   }
 ];
 
@@ -54,17 +46,19 @@ export default function Home() {
   const [restTimer, setRestTimer] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Estados com localStorage
+  // Estados
   const [totalCompleted, setTotalCompleted] = useState(0);
   const [waterIntake, setWaterIntake] = useState(0);
   const [selectedExerciseFilter, setSelectedExerciseFilter] = useState('ex_1');
-  const [userProfile, setUserProfile] = useState({
-    weight: 70.0, height: 1.75, bf: 18, arm: 30, waist: 75, hip: 95, thigh: 55
-  });
   const [workouts, setWorkouts] = useState(INITIAL_WORKOUTS);
   const [completedDaysInMonth, setCompletedDaysInMonth] = useState([]);
+  
+  // Perfil com a Meta de Água inclusa (padrão 3000ml)
+  const [userProfile, setUserProfile] = useState({
+    weight: 70.0, height: 1.75, bf: 18, arm: 30, waist: 75, hip: 95, thigh: 55, waterGoal: 3000
+  });
 
-  // Carregar dados salvos no celular ao iniciar
+  // Carregar do localStorage
   useEffect(() => {
     try {
       const savedWorkouts = localStorage.getItem('pro_workouts');
@@ -79,13 +73,13 @@ export default function Home() {
       if (savedProfile) setUserProfile(JSON.parse(savedProfile));
       if (savedDays) setCompletedDaysInMonth(JSON.parse(savedDays));
     } catch (e) {
-      console.error("Erro ao carregar dados", e);
+      console.error("Erro ao carregar", e);
     } finally {
       setIsLoaded(true);
     }
   }, []);
 
-  // Salvar automaticamente no localStorage quando houver mudanças
+  // Salvar no localStorage
   useEffect(() => {
     if (!isLoaded) return;
     localStorage.setItem('pro_workouts', JSON.stringify(workouts));
@@ -94,8 +88,6 @@ export default function Home() {
     localStorage.setItem('pro_profile', JSON.stringify(userProfile));
     localStorage.setItem('pro_days', JSON.stringify(completedDaysInMonth));
   }, [workouts, totalCompleted, waterIntake, userProfile, completedDaysInMonth, isLoaded]);
-
-  const waterGoal = 3000;
 
   const navItems = [
     { id: 'inicio', label: 'Início', icon: '🏠', gradient: 'linear-gradient(135deg, #10B981, #059669)' },
@@ -128,7 +120,7 @@ export default function Home() {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // Funções do Treino
+  // Funções
   const handleFinishWorkout = () => {
     setWorkoutSession(null);
     setTotalCompleted(prev => prev + 1);
@@ -145,23 +137,15 @@ export default function Home() {
     setWorkouts([...workouts, newWorkout]);
     setActiveWorkout(newWorkout.id);
   };
-
   const deleteWorkout = (wId) => setWorkouts(workouts.filter(w => w.id !== wId));
-
   const addNewExercise = (wId) => {
-    setWorkouts(workouts.map(w => w.id !== wId ? w : {
-      ...w, exercises: [...w.exercises, { id: `E_${Date.now()}`, name: 'Novo Exercício', notes: '', restTime: 60, sets: [{ id: 1, prev: '-', weight: 0, reps: 0, completed: false }] }]
-    }));
+    setWorkouts(workouts.map(w => w.id !== wId ? w : { ...w, exercises: [...w.exercises, { id: `E_${Date.now()}`, name: 'Novo Exercício', notes: '', restTime: 60, sets: [{ id: 1, prev: '-', weight: 0, reps: 0, completed: false }] }] }));
   };
-
   const deleteExercise = (wId, exId) => {
     setWorkouts(workouts.map(w => w.id !== wId ? w : { ...w, exercises: w.exercises.filter(ex => ex.id !== exId) }));
   };
-
-  const updateWorkoutField = (wId, field, value) => {
-    setWorkouts(workouts.map(w => w.id === wId ? { ...w, [field]: value } : w));
-  };
-
+  const updateWorkoutField = (wId, field, value) => setWorkouts(workouts.map(w => w.id === wId ? { ...w, [field]: value } : w));
+  
   const toggleSetComplete = (wId, exId, setIndex, restTime) => {
     if (isEditing) return;
     setWorkouts(workouts.map(w => w.id === wId ? {
@@ -184,7 +168,6 @@ export default function Home() {
       })
     } : w));
   };
-
   const updateSetData = (wId, exId, setIndex, field, value) => {
     setWorkouts(workouts.map(w => w.id === wId ? {
       ...w, exercises: w.exercises.map(ex => ex.id === exId ? {
@@ -192,14 +175,10 @@ export default function Home() {
       } : ex)
     } : w));
   };
-
   const updateExerciseField = (wId, exId, field, value) => {
-    setWorkouts(workouts.map(w => w.id === wId ? {
-      ...w, exercises: w.exercises.map(ex => ex.id === exId ? { ...ex, [field]: value } : ex)
-    } : w));
+    setWorkouts(workouts.map(w => w.id === wId ? { ...w, exercises: w.exercises.map(ex => ex.id === exId ? { ...ex, [field]: value } : ex) } : w));
   };
 
-  // Funções de Backup
   const exportBackup = () => {
     const data = { workouts, totalCompleted, waterIntake, userProfile, completedDaysInMonth };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -213,17 +192,17 @@ export default function Home() {
   const importBackup = (e) => {
     const fileReader = new FileReader();
     fileReader.readAsText(e.target.files[0], "UTF-8");
-    fileReader.onload = (e) => {
+    fileReader.onload = (ev) => {
       try {
-        const data = JSON.parse(e.target.result);
+        const data = JSON.parse(ev.target.result);
         if (data.workouts) setWorkouts(data.workouts);
-        if (data.totalCompleted) setTotalCompleted(data.totalCompleted);
-        if (data.waterIntake) setWaterIntake(data.waterIntake);
+        if (data.totalCompleted !== undefined) setTotalCompleted(data.totalCompleted);
+        if (data.waterIntake !== undefined) setWaterIntake(data.waterIntake);
         if (data.userProfile) setUserProfile(data.userProfile);
         if (data.completedDaysInMonth) setCompletedDaysInMonth(data.completedDaysInMonth);
         alert('Backup restaurado com sucesso!');
       } catch (err) {
-        alert('Erro ao importar arquivo de backup.');
+        alert('Erro ao importar arquivo.');
       }
     };
   };
@@ -234,30 +213,17 @@ export default function Home() {
 
   return (
     <>
-      <style jsx global>{`
+      <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: ${THEME.bgGradient}; min-height: 100vh; color: #FFF; }
-        .app-container { display: flex; flex-direction: column; min-height: 100vh; }
-        .bottom-nav {
-          position: fixed; bottom: 0; left: 0; right: 0;
-          background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px);
-          padding: 12px 16px 20px 16px; display: flex; justify-content: space-between; align-items: center; gap: 8px; z-index: 100;
-          border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .square-nav-btn {
-          width: 58px; height: 58px; border-radius: 18px; border: 1px solid rgba(255, 255, 255, 0.08);
-          background: rgba(255, 255, 255, 0.06); color: #A1A1AA; display: flex; flex-direction: column;
-          align-items: center; justify-content: center; gap: 2px; cursor: pointer; transition: all 0.25s ease;
-        }
-        .square-nav-btn.active { color: #FFFFFF; border: none; box-shadow: 0 8px 20px rgba(0,0,0,0.3); transform: translateY(-2px); }
-        .main-content { flex: 1; padding: 24px 16px 110px 16px; max-width: 480px; margin: 0 auto; width: 100%; }
-      `}</style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background: ${THEME.bgGradient}; min-height: 100vh; color: #FFF; background-attachment: fixed; }
+      `}} />
 
-      <div className="app-container">
-        <main className="main-content">
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        
+        {/* ÁREA PRINCIPAL */}
+        <main style={{ flex: 1, padding: '24px 16px 110px 16px', maxWidth: '480px', margin: '0 auto', width: '100%' }}>
           
-          {/* HEADER */}
           <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
             <div>
               <span style={{ fontSize: '0.7rem', color: '#A855F7', fontWeight: '800', letterSpacing: '1.5px' }}>PRO TRACKER</span>
@@ -269,7 +235,6 @@ export default function Home() {
                 {activeTab === 'configuracoes' && 'Ajustes'}
               </h1>
             </div>
-
             <div style={{ background: 'rgba(255, 255, 255, 0.1)', backdropFilter: 'blur(12px)', padding: '8px 14px', borderRadius: '18px', border: '1px solid rgba(255, 255, 255, 0.15)', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ width: '30px', height: '30px', borderRadius: '10px', background: 'linear-gradient(135deg, #10B981, #059669)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', fontWeight: 'bold' }}>⚡</div>
               <div>
@@ -297,13 +262,13 @@ export default function Home() {
                     <span style={{ fontSize: '1.4rem' }}>💧</span>
                     <div>
                       <h3 style={{ fontSize: '0.95rem', fontWeight: '800' }}>Hidratação do Dia</h3>
-                      <span style={{ fontSize: '0.75rem', color: THEME.textSecondary, fontWeight: '600' }}>Meta: {(waterGoal / 1000).toFixed(1)}L</span>
+                      <span style={{ fontSize: '0.75rem', color: THEME.textSecondary, fontWeight: '600' }}>Meta: {(userProfile.waterGoal / 1000).toFixed(1)}L</span>
                     </div>
                   </div>
                   <span style={{ fontSize: '1rem', fontWeight: '800', color: '#3B82F6' }}>{(waterIntake / 1000).toFixed(2)}L</span>
                 </div>
                 <div style={{ width: '100%', height: '10px', background: THEME.inputBg, borderRadius: '6px', overflow: 'hidden', marginBottom: '14px' }}>
-                  <div style={{ width: `${Math.min((waterIntake / waterGoal) * 100, 100)}%`, height: '100%', background: 'linear-gradient(90deg, #3B82F6, #60A5FA)', borderRadius: '6px', transition: 'width 0.3s ease' }} />
+                  <div style={{ width: `${Math.min((waterIntake / userProfile.waterGoal) * 100, 100)}%`, height: '100%', background: 'linear-gradient(90deg, #3B82F6, #60A5FA)', borderRadius: '6px', transition: 'width 0.3s ease' }} />
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button onClick={() => setWaterIntake(p => p + 250)} style={{ flex: 1, padding: '10px', background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', borderRadius: '12px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer' }}>+ 250 ml</button>
@@ -375,6 +340,7 @@ export default function Home() {
                                 {isEditing && <button onClick={() => deleteExercise(w.id, ex.id)} style={{ background: 'transparent', color: '#EF4444', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold' }}>Excluir</button>}
                               </div>
                               <input type="text" value={ex.notes} onChange={(e) => updateExerciseField(w.id, ex.id, 'notes', e.target.value)} placeholder="Anotações..." readOnly={!isEditing} style={{ width: '100%', background: 'transparent', border: 'none', fontSize: '0.75rem', color: THEME.textSecondary, marginBottom: '8px', outline: 'none' }} />
+                              
                               <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 1fr 1fr 32px', gap: '6px', fontSize: '0.65rem', color: THEME.textSecondary, fontWeight: '700', textAlign: 'center', marginBottom: '6px' }}>
                                 <span>SET</span><span>ANT.</span><span>KG</span><span>REPS</span><span>✓</span>
                               </div>
@@ -409,7 +375,7 @@ export default function Home() {
               <div style={{ background: THEME.cardBg, padding: '20px', borderRadius: '24px', color: THEME.textPrimary, boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                   <h3 style={{ fontSize: '1rem', fontWeight: '800' }}>Histórico do Mês</h3>
-                  <span style={{ fontSize: '0.75rem', color: '#3B82F6', fontWeight: '800' }}>Julho 2026</span>
+                  <span style={{ fontSize: '0.75rem', color: '#3B82F6', fontWeight: '800' }}>Mês Atual</span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', textAlign: 'center', fontSize: '0.7rem', fontWeight: '700', color: THEME.textSecondary, marginBottom: '8px' }}>
                   <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
@@ -460,33 +426,71 @@ export default function Home() {
             </div>
           )}
 
-          {/* 5. ABA AJUSTES (COM BACKUP) */}
+          {/* 5. ABA AJUSTES */}
           {activeTab === 'configuracoes' && (
-            <div style={{ background: THEME.cardBg, padding: '24px', borderRadius: '24px', color: THEME.textPrimary, boxShadow: '0 10px 30px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: '800' }}>Gerenciamento de Dados</h3>
-              <p style={{ fontSize: '0.8rem', color: THEME.textSecondary }}>Seus dados ficam salvos localmente no seu celular. Use as opções abaixo para fazer backup de segurança.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
-              <button onClick={exportBackup} style={{ width: '100%', padding: '14px', background: '#3B82F6', color: '#FFF', border: 'none', borderRadius: '16px', fontWeight: '800', cursor: 'pointer', fontSize: '0.85rem' }}>
-                📥 BAIXAR BACKUP DOS DADOS
-              </button>
+              {/* METAS DIÁRIAS (EDIÇÃO DE ÁGUA AQUI) */}
+              <div style={{ background: THEME.cardBg, padding: '20px', borderRadius: '24px', color: THEME.textPrimary, boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: '800', marginBottom: '14px' }}>Metas Diárias</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: THEME.inputBg, padding: '12px 16px', borderRadius: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '1.2rem' }}>💧</span>
+                    <span style={{ fontSize: '0.85rem', fontWeight: '700', color: THEME.textSecondary }}>Água Diária (ml)</span>
+                  </div>
+                  <input 
+                    type="number" 
+                    value={userProfile.waterGoal} 
+                    onChange={(e) => setUserProfile({ ...userProfile, waterGoal: parseInt(e.target.value) || 0 })} 
+                    style={{ width: '70px', textAlign: 'right', background: 'transparent', border: 'none', fontWeight: '800', fontSize: '1rem', color: '#3B82F6', outline: 'none' }} 
+                  />
+                </div>
+              </div>
 
-              <label style={{ width: '100%', padding: '14px', background: THEME.inputBg, color: THEME.textPrimary, border: '1px dashed #CBD5E1', borderRadius: '16px', fontWeight: '800', cursor: 'pointer', fontSize: '0.85rem', textAlign: 'center', display: 'block' }}>
-                📤 RESTAURAR BACKUP (ARQUIVO .JSON)
-                <input type="file" accept=".json" onChange={importBackup} style={{ display: 'none' }} />
-              </label>
+              {/* BACKUP */}
+              <div style={{ background: THEME.cardBg, padding: '24px', borderRadius: '24px', color: THEME.textPrimary, boxShadow: '0 10px 30px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: '800' }}>Gerenciamento de Dados</h3>
+                <p style={{ fontSize: '0.8rem', color: THEME.textSecondary }}>Seus dados ficam salvos localmente. Use as opções abaixo para fazer backup de segurança.</p>
+                
+                <button onClick={exportBackup} style={{ width: '100%', padding: '14px', background: '#3B82F6', color: '#FFF', border: 'none', borderRadius: '16px', fontWeight: '800', cursor: 'pointer', fontSize: '0.85rem' }}>
+                  📥 BAIXAR BACKUP DOS DADOS
+                </button>
+                <label style={{ width: '100%', padding: '14px', background: THEME.inputBg, color: THEME.textPrimary, border: '1px dashed #CBD5E1', borderRadius: '16px', fontWeight: '800', cursor: 'pointer', fontSize: '0.85rem', textAlign: 'center', display: 'block' }}>
+                  📤 RESTAURAR BACKUP (.JSON)
+                  <input type="file" accept=".json" onChange={importBackup} style={{ display: 'none' }} />
+                </label>
+              </div>
             </div>
           )}
 
         </main>
 
-        {/* NAVEGAÇÃO FIXA */}
-        <nav className="bottom-nav">
+        {/* NAVEGAÇÃO FIXA INFERIOR GARANTIDA (ESTILOS INLINE) */}
+        <nav style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(15, 23, 42, 0.85)',
+          backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+          padding: '12px 16px 20px 16px', display: 'flex', justifyContent: 'space-between',
+          alignItems: 'center', gap: '8px', zIndex: 100, borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+        }}>
           {navItems.map((item) => {
             const isActive = activeTab === item.id;
             return (
-              <button key={item.id} onClick={() => setActiveTab(item.id)} className={`square-nav-btn ${isActive ? 'active' : ''}`} style={{ background: isActive ? item.gradient : 'rgba(255, 255, 255, 0.06)' }}>
+              <button 
+                key={item.id} 
+                onClick={() => setActiveTab(item.id)} 
+                style={{
+                  width: '58px', height: '58px', borderRadius: '18px',
+                  border: isActive ? 'none' : '1px solid rgba(255, 255, 255, 0.08)',
+                  background: isActive ? item.gradient : 'rgba(255, 255, 255, 0.06)',
+                  color: isActive ? '#FFFFFF' : '#A1A1AA',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px',
+                  cursor: 'pointer', transition: 'all 0.25s ease',
+                  boxShadow: isActive ? '0 8px 20px rgba(0,0,0,0.3)' : 'none',
+                  transform: isActive ? 'translateY(-2px)' : 'none'
+                }}
+              >
                 <span style={{ fontSize: '1.2rem' }}>{item.icon}</span>
-                <span style={{ fontSize: '0.65rem', fontWeight: isActive ? '800' : '600', color: isActive ? '#FFF' : '#A1A1AA' }}>{item.label}</span>
+                <span style={{ fontSize: '0.65rem', fontWeight: isActive ? '800' : '600' }}>{item.label}</span>
               </button>
             );
           })}
