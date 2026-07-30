@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
 
-// Paleta Vibrante e Colorida sobre Fundo Roxo Degradê
 const THEME = {
   bgGradient: 'linear-gradient(180deg, #2E1065 0%, #1E1B4B 100%)',
   cardBg: 'rgba(255, 255, 255, 0.95)',
@@ -12,24 +11,40 @@ const THEME = {
 };
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState('meus-treinos');
+  const [activeTab, setActiveTab] = useState('inicio');
   const [isEditing, setIsEditing] = useState(false);
   const [activeWorkout, setActiveWorkout] = useState(null);
   const [workoutSession, setWorkoutSession] = useState(null);
   const [restTimer, setRestTimer] = useState(null);
-  const [totalCompleted, setTotalCompleted] = useState(12); // Exemplo com histórico inicial
+  const [totalCompleted, setTotalCompleted] = useState(12);
 
-  // Filtro de exercício para o gráfico de evolução
-  const [selectedExerciseFilter, setSelectedExerciseFilter] = useState('ex_1');
+  // Estados da Aba Início (Hidratação)
+  const [waterIntake, setWaterIntake] = useState(1250); // em ml
+  const waterGoal = 3000;
 
+  // Estados da Aba Perfil (Antropometria)
+  const [userProfile, setUserProfile] = useState({
+    weight: 70.5,
+    height: 1.75,
+    bf: 18,
+    arm: 34,
+    waist: 78,
+    hip: 98,
+    thigh: 56
+  });
+
+  const selectedExerciseFilter = 'ex_1';
+
+  // Navegação fixa inferior
   const navItems = [
-    { id: 'visao-geral', label: 'Início', icon: '🏠', gradient: 'linear-gradient(135deg, #10B981, #059669)', color: '#10B981' },
+    { id: 'inicio', label: 'Início', icon: '🏠', gradient: 'linear-gradient(135deg, #10B981, #059669)', color: '#10B981' },
     { id: 'meus-treinos', label: 'Treinos', icon: '📋', gradient: 'linear-gradient(135deg, #8B5CF6, #6D28D9)', color: '#8B5CF6' },
     { id: 'estatisticas', label: 'Dados', icon: '📈', gradient: 'linear-gradient(135deg, #3B82F6, #1D4ED8)', color: '#3B82F6' },
     { id: 'perfil', label: 'Perfil', icon: '👤', gradient: 'linear-gradient(135deg, #F97316, #EA580C)', color: '#F97316' },
     { id: 'configuracoes', label: 'Ajustes', icon: '⚙️', gradient: 'linear-gradient(135deg, #EC4899, #BE185D)', color: '#EC4899' }
   ];
 
+  // Treinos cadastrados
   const [workouts, setWorkouts] = useState([
     {
       id: 'TREINO_A', title: 'Treino A', category: 'Inferiores & Core', color: '#00D2FF', icon: '⚡',
@@ -66,21 +81,14 @@ export default function Home() {
     }
   ]);
 
-  // Dados fictícios de evolução para o gráfico da aba Estatísticas
+  // Histórico de Cargas (Aba Dados)
   const exerciseHistory = {
-    'ex_1': [
-      { week: 'Sem 1', weight: 14 },
-      { week: 'Sem 2', weight: 16 },
-      { week: 'Sem 3', weight: 18 },
-      { week: 'Sem 4', weight: 20 }
-    ],
-    'ex_2': [
-      { week: 'Sem 1', weight: 4 },
-      { week: 'Sem 2', weight: 5 },
-      { week: 'Sem 3', weight: 5 },
-      { week: 'Sem 4', weight: 6 }
-    ]
+    'ex_1': [{ week: 'Sem 1', weight: 14 }, { week: 'Sem 2', weight: 16 }, { week: 'Sem 3', weight: 18 }, { week: 'Sem 4', weight: 20 }],
+    'ex_2': [{ week: 'Sem 1', weight: 4 }, { week: 'Sem 2', weight: 5 }, { week: 'Sem 3', weight: 5 }, { week: 'Sem 4', weight: 6 }]
   };
+
+  // Dias com treino feito no mês atual (Aba Dados)
+  const completedDaysInMonth = [2, 4, 7, 9, 11, 14, 16, 18, 21, 23, 25, 28];
 
   // Cronômetros
   useEffect(() => {
@@ -105,7 +113,7 @@ export default function Home() {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // Funções de manipulação do treino
+  // Manipulação de Treinos
   const addNewWorkout = () => {
     const colors = ['#00D2FF', '#A855F7', '#10B981', '#F59E0B', '#EC4899'];
     const randomColor = colors[workouts.length % colors.length];
@@ -172,6 +180,9 @@ export default function Home() {
     } : w));
   };
 
+  // Cálculo de IMC
+  const bmi = (userProfile.weight / (userProfile.height * userProfile.height)).toFixed(1);
+
   return (
     <>
       <style jsx global>{`
@@ -190,7 +201,7 @@ export default function Home() {
           bottom: 0;
           left: 0;
           right: 0;
-          background: rgba(15, 23, 42, 0.75);
+          background: rgba(15, 23, 42, 0.85);
           backdrop-filter: blur(16px);
           padding: 12px 16px 20px 16px;
           display: flex;
@@ -236,12 +247,16 @@ export default function Home() {
       <div className="app-container">
         <main className="main-content">
           
-          {/* HEADER */}
+          {/* HEADER PRINCIPAL */}
           <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
             <div>
-              <span style={{ fontSize: '0.7rem', color: '#3B82F6', fontWeight: '800', letterSpacing: '1.5px' }}>PRO TRACKER</span>
+              <span style={{ fontSize: '0.7rem', color: '#A855F7', fontWeight: '800', letterSpacing: '1.5px' }}>PRO TRACKER</span>
               <h1 style={{ fontSize: '1.7rem', color: '#FFF', fontWeight: '800', margin: '2px 0 0 0' }}>
-                {activeTab === 'estatisticas' ? 'Desempenho' : 'Fichas de Treino'}
+                {activeTab === 'inicio' && 'Visão Geral'}
+                {activeTab === 'meus-treinos' && 'Fichas de Treino'}
+                {activeTab === 'estatisticas' && 'Desempenho'}
+                {activeTab === 'perfil' && 'Perfil Físico'}
+                {activeTab === 'configuracoes' && 'Ajustes'}
               </h1>
             </div>
 
@@ -255,17 +270,85 @@ export default function Home() {
               alignItems: 'center',
               gap: '10px'
             }}>
-              <div style={{ width: '30px', height: '30px', borderRadius: '10px', background: 'linear-gradient(135deg, #3B82F6, #1D4ED8)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', fontWeight: 'bold' }}>
-                🔥
+              <div style={{ width: '30px', height: '30px', borderRadius: '10px', background: 'linear-gradient(135deg, #10B981, #059669)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', fontWeight: 'bold' }}>
+                ⚡
               </div>
               <div>
-                <span style={{ fontSize: '1.1rem', fontWeight: '800', display: 'block', lineHeight: '1', color: '#FFF' }}>3 sem</span>
-                <span style={{ fontSize: '0.6rem', color: '#93C5FD', fontWeight: '700' }}>OFENSIVA</span>
+                <span style={{ fontSize: '1.1rem', fontWeight: '800', display: 'block', lineHeight: '1', color: '#FFF' }}>{totalCompleted}</span>
+                <span style={{ fontSize: '0.6rem', color: '#A7F3D0', fontWeight: '700' }}>SESSÕES</span>
               </div>
             </div>
           </header>
 
-          {/* ABA DE TREINOS */}
+          {/* 1. ABA INÍCIO */}
+          {activeTab === 'inicio' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              
+              {/* CARD DE TREINO SUGERIDO DO DIA */}
+              <div style={{ 
+                background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)', 
+                padding: '22px', 
+                borderRadius: '26px', 
+                boxShadow: '0 12px 30px rgba(109, 40, 217, 0.35)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <span style={{ fontSize: '0.75rem', color: '#DDD6FE', fontWeight: '800', letterSpacing: '1px' }}>PRÓXIMO TREINO</span>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: '800', margin: '4px 0 2px 0', color: '#FFF' }}>Treino A</h2>
+                <p style={{ fontSize: '0.85rem', color: '#EDE9FE', marginBottom: '18px' }}>Inferiores & Core • 2 Exercícios</p>
+
+                <button 
+                  onClick={() => { setActiveTab('meus-treinos'); setActiveWorkout('TREINO_A'); }}
+                  style={{ 
+                    width: '100%', 
+                    padding: '14px', 
+                    background: '#FFFFFF', 
+                    color: '#6D28D9', 
+                    border: 'none', 
+                    borderRadius: '16px', 
+                    fontWeight: '800', 
+                    fontSize: '0.9rem', 
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
+                  }}
+                >
+                  ▶ INICIAR SESSÃO AGORA
+                </button>
+              </div>
+
+              {/* REGISTRO DE ÁGUA / HIDRATAÇÃO */}
+              <div style={{ background: THEME.cardBg, padding: '20px', borderRadius: '24px', color: THEME.textPrimary, boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '1.4rem' }}>💧</span>
+                    <div>
+                      <h3 style={{ fontSize: '0.95rem', fontWeight: '800' }}>Hidratação do Dia</h3>
+                      <span style={{ fontSize: '0.75rem', color: THEME.textSecondary, fontWeight: '600' }}>Meta: {(waterGoal / 1000).toFixed(1)}L</span>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '1rem', fontWeight: '800', color: '#3B82F6' }}>{(waterIntake / 1000).toFixed(2)}L</span>
+                </div>
+
+                {/* BARRA DE PROGRESSO DE ÁGUA */}
+                <div style={{ width: '100%', height: '10px', background: THEME.inputBg, borderRadius: '6px', overflow: 'hidden', marginBottom: '14px' }}>
+                  <div style={{ width: `${Math.min((waterIntake / waterGoal) * 100, 100)}%`, height: '100%', background: 'linear-gradient(90deg, #3B82F6, #60A5FA)', borderRadius: '6px', transition: 'width 0.3s ease' }} />
+                </div>
+
+                {/* BOTÕES DE ADIÇÃO RÁPIDA DE ÁGUA */}
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button onClick={() => setWaterIntake(p => p + 250)} style={{ flex: 1, padding: '10px', background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', borderRadius: '12px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer' }}>
+                    + 250 ml
+                  </button>
+                  <button onClick={() => setWaterIntake(p => p + 500)} style={{ flex: 1, padding: '10px', background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', borderRadius: '12px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer' }}>
+                    + 500 ml
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* 2. ABA DE TREINOS */}
           {activeTab === 'meus-treinos' && (
             <>
               <div style={{ marginBottom: '20px' }}>
@@ -450,98 +533,115 @@ export default function Home() {
             </>
           )}
 
-          {/* ABA DE ESTATÍSTICAS / DESEMPENHO */}
+          {/* 3. ABA DADOS / ESTATÍSTICAS */}
           {activeTab === 'estatisticas' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
-              {/* FREQUÊNCIA DA SEMANA (HABIT TRACKER) */}
+              {/* CALENDÁRIO COMPLETO DO MÊS */}
               <div style={{ background: THEME.cardBg, padding: '20px', borderRadius: '24px', color: THEME.textPrimary, boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h3 style={{ fontSize: '1rem', fontWeight: '800' }}>Frequência da Semana</h3>
-                  <span style={{ fontSize: '0.75rem', color: '#10B981', fontWeight: '700', background: '#ECFDF5', padding: '4px 10px', borderRadius: '10px' }}>3 de 4 Treinos</span>
+                  <h3 style={{ fontSize: '1rem', fontWeight: '800' }}>Histórico do Mês</h3>
+                  <span style={{ fontSize: '0.75rem', color: '#3B82F6', fontWeight: '800' }}>Julho 2026</span>
                 </div>
                 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  {[
-                    { day: 'S', done: true },
-                    { day: 'T', done: true },
-                    { day: 'Q', done: false },
-                    { day: 'Q', done: true },
-                    { day: 'S', done: false },
-                    { day: 'S', done: false },
-                    { day: 'D', done: false }
-                  ].map((item, index) => (
-                    <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-                      <div style={{ 
-                        width: '38px', height: '38px', borderRadius: '12px', 
-                        background: item.done ? 'linear-gradient(135deg, #10B981, #059669)' : THEME.inputBg,
-                        color: item.done ? '#FFF' : THEME.textSecondary,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontWeight: '800', fontSize: '0.85rem'
-                      }}>
-                        {item.done ? '✓' : ''}
-                      </div>
-                      <span style={{ fontSize: '0.7rem', fontWeight: '700', color: THEME.textSecondary }}>{item.day}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* EVOLUÇÃO DE CARGAS (GRÁFICO SIMULADO) */}
-              <div style={{ background: THEME.cardBg, padding: '20px', borderRadius: '24px', color: THEME.textPrimary, boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <h3 style={{ fontSize: '1rem', fontWeight: '800' }}>Evolução de Carga</h3>
-                  <select 
-                    value={selectedExerciseFilter} 
-                    onChange={(e) => setSelectedExerciseFilter(e.target.value)}
-                    style={{ background: THEME.inputBg, border: 'none', padding: '6px 10px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: '700', color: THEME.textPrimary, outline: 'none' }}
-                  >
-                    <option value="ex_1">Elevação Pélvica</option>
-                    <option value="ex_2">Desenvolvimento</option>
-                  </select>
+                {/* CABEÇALHO DIAS DA SEMANA */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', textAlign: 'center', fontSize: '0.7rem', fontWeight: '700', color: THEME.textSecondary, marginBottom: '8px' }}>
+                  <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
                 </div>
 
-                {/* GRÁFICO EM BARRAS INTERATIVO */}
-                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '120px', paddingTop: '20px', paddingBottom: '10px', borderBottom: `1px solid ${THEME.inputBg}` }}>
-                  {(exerciseHistory[selectedExerciseFilter] || []).map((item, idx) => {
-                    const maxWeight = 25;
-                    const heightPercent = (item.weight / maxWeight) * 100;
+                {/* GRID DE DIAS DO MÊS */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', textAlign: 'center' }}>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
+                    const isDone = completedDaysInMonth.includes(day);
 
                     return (
-                      <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', flex: 1 }}>
-                        <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#3B82F6' }}>{item.weight}kg</span>
-                        <div style={{ 
-                          width: '24px', 
-                          height: `${heightPercent}%`, 
-                          background: 'linear-gradient(180deg, #3B82F6, #1D4ED8)', 
-                          borderRadius: '8px 8px 4px 4px',
-                          transition: 'height 0.3s ease'
-                        }} />
-                        <span style={{ fontSize: '0.65rem', color: THEME.textSecondary, fontWeight: '600' }}>{item.week}</span>
+                      <div key={day} style={{ 
+                        height: '36px', 
+                        borderRadius: '10px', 
+                        background: isDone ? 'linear-gradient(135deg, #10B981, #059669)' : THEME.inputBg,
+                        color: isDone ? '#FFF' : THEME.textPrimary,
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justify: 'center',
+                        fontWeight: isDone ? '800' : '600',
+                        fontSize: '0.8rem'
+                      }}>
+                        {day}
                       </div>
                     );
                   })}
                 </div>
               </div>
 
-              {/* FOCO MUSCULAR MENSAL */}
+              {/* EVOLUÇÃO DE CARGAS */}
               <div style={{ background: THEME.cardBg, padding: '20px', borderRadius: '24px', color: THEME.textPrimary, boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: '800', marginBottom: '14px' }}>Divisão por Grupo Muscular</h3>
+                <h3 style={{ fontSize: '1rem', fontWeight: '800', marginBottom: '12px' }}>Evolução de Carga</h3>
+
+                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '120px', paddingTop: '20px', paddingBottom: '10px', borderBottom: `1px solid ${THEME.inputBg}` }}>
+                  {(exerciseHistory[selectedExerciseFilter] || []).map((item, idx) => (
+                    <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', flex: 1 }}>
+                      <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#3B82F6' }}>{item.weight}kg</span>
+                      <div style={{ 
+                        width: '24px', 
+                        height: `${(item.weight / 25) * 100}%`, 
+                        background: 'linear-gradient(180deg, #3B82F6, #1D4ED8)', 
+                        borderRadius: '8px 8px 4px 4px'
+                      }} />
+                      <span style={{ fontSize: '0.65rem', color: THEME.textSecondary, fontWeight: '600' }}>{item.week}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* 4. ABA PERFIL (ACOMPANHAMENTO FÍSICO) */}
+          {activeTab === 'perfil' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              
+              {/* METRICAS PRINCIPAIS */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ background: THEME.cardBg, padding: '16px', borderRadius: '20px', color: THEME.textPrimary }}>
+                  <span style={{ fontSize: '0.7rem', color: THEME.textSecondary, fontWeight: '700' }}>PESO ATUAL</span>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginTop: '4px' }}>
+                    <input 
+                      type="number" 
+                      value={userProfile.weight} 
+                      onChange={(e) => setUserProfile({ ...userProfile, weight: parseFloat(e.target.value) || 0 })}
+                      style={{ fontSize: '1.4rem', fontWeight: '800', border: 'none', background: 'transparent', width: '70px', color: THEME.textPrimary, outline: 'none' }}
+                    />
+                    <span style={{ fontSize: '0.8rem', fontWeight: '700', color: THEME.textSecondary }}>kg</span>
+                  </div>
+                </div>
+
+                <div style={{ background: THEME.cardBg, padding: '16px', borderRadius: '20px', color: THEME.textPrimary }}>
+                  <span style={{ fontSize: '0.7rem', color: THEME.textSecondary, fontWeight: '700' }}>IMC CALCULADO</span>
+                  <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#F97316', marginTop: '4px' }}>
+                    {bmi}
+                  </div>
+                </div>
+              </div>
+
+              {/* MEDIDAS CORPORAIS */}
+              <div style={{ background: THEME.cardBg, padding: '20px', borderRadius: '24px', color: THEME.textPrimary, boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: '800', marginBottom: '14px' }}>Medidas Corporais (cm)</h3>
                 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   {[
-                    { label: 'Inferiores & Glúteos', percent: 45, color: '#00D2FF' },
-                    { label: 'Superiores', percent: 35, color: '#A855F7' },
-                    { label: 'Cardio & Core', percent: 20, color: '#10B981' }
-                  ].map((group, i) => (
-                    <div key={i}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: '700', marginBottom: '4px' }}>
-                        <span>{group.label}</span>
-                        <span style={{ color: THEME.textSecondary }}>{group.percent}%</span>
-                      </div>
-                      <div style={{ width: '100%', height: '8px', background: THEME.inputBg, borderRadius: '4px', overflow: 'hidden' }}>
-                        <div style={{ width: `${group.percent}%`, height: '100%', background: group.color, borderRadius: '4px' }} />
-                      </div>
+                    { label: 'Braço', field: 'arm' },
+                    { label: 'Cintura', field: 'waist' },
+                    { label: 'Quadril', field: 'hip' },
+                    { label: 'Coxa', field: 'thigh' }
+                  ].map((m) => (
+                    <div key={m.field} style={{ background: THEME.inputBg, padding: '12px', borderRadius: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: '700', color: THEME.textSecondary }}>{m.label}</span>
+                      <input 
+                        type="number" 
+                        value={userProfile[m.field]} 
+                        onChange={(e) => setUserProfile({ ...userProfile, [m.field]: parseFloat(e.target.value) || 0 })}
+                        style={{ width: '45px', textAlign: 'right', background: 'transparent', border: 'none', fontWeight: '800', fontSize: '0.9rem', color: THEME.textPrimary, outline: 'none' }}
+                      />
                     </div>
                   ))}
                 </div>
@@ -551,7 +651,7 @@ export default function Home() {
           )}
 
           {/* DEMAIS ABAS */}
-          {activeTab !== 'meus-treinos' && activeTab !== 'estatisticas' && (
+          {activeTab === 'configuracoes' && (
             <div style={{ background: THEME.cardBg, padding: '40px 20px', borderRadius: '24px', textAlign: 'center', color: THEME.textSecondary }}>
               Página de <strong style={{ color: THEME.textPrimary }}>{activeTab.toUpperCase()}</strong> em desenvolvimento.
             </div>
