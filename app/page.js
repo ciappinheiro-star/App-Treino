@@ -18,11 +18,14 @@ export default function Home() {
   const [restTimer, setRestTimer] = useState(null);
   const [totalCompleted, setTotalCompleted] = useState(12);
 
-  // Estados da Aba Início (Hidratação)
-  const [waterIntake, setWaterIntake] = useState(1250); // em ml
+  // Hidratação (Aba Início)
+  const [waterIntake, setWaterIntake] = useState(1250);
   const waterGoal = 3000;
 
-  // Estados da Aba Perfil (Antropometria)
+  // Filtro de exercício no gráfico da Aba Dados
+  const [selectedExerciseFilter, setSelectedExerciseFilter] = useState('ex_1');
+
+  // Perfil Físico (Aba Perfil)
   const [userProfile, setUserProfile] = useState({
     weight: 70.5,
     height: 1.75,
@@ -33,15 +36,13 @@ export default function Home() {
     thigh: 56
   });
 
-  const selectedExerciseFilter = 'ex_1';
-
-  // Navegação fixa inferior
+  // Botões do menu inferior com cores únicas
   const navItems = [
-    { id: 'inicio', label: 'Início', icon: '🏠', gradient: 'linear-gradient(135deg, #10B981, #059669)', color: '#10B981' },
-    { id: 'meus-treinos', label: 'Treinos', icon: '📋', gradient: 'linear-gradient(135deg, #8B5CF6, #6D28D9)', color: '#8B5CF6' },
-    { id: 'estatisticas', label: 'Dados', icon: '📈', gradient: 'linear-gradient(135deg, #3B82F6, #1D4ED8)', color: '#3B82F6' },
-    { id: 'perfil', label: 'Perfil', icon: '👤', gradient: 'linear-gradient(135deg, #F97316, #EA580C)', color: '#F97316' },
-    { id: 'configuracoes', label: 'Ajustes', icon: '⚙️', gradient: 'linear-gradient(135deg, #EC4899, #BE185D)', color: '#EC4899' }
+    { id: 'inicio', label: 'Início', icon: '🏠', gradient: 'linear-gradient(135deg, #10B981, #059669)' },
+    { id: 'meus-treinos', label: 'Treinos', icon: '📋', gradient: 'linear-gradient(135deg, #8B5CF6, #6D28D9)' },
+    { id: 'estatisticas', label: 'Dados', icon: '📈', gradient: 'linear-gradient(135deg, #3B82F6, #1D4ED8)' },
+    { id: 'perfil', label: 'Perfil', icon: '👤', gradient: 'linear-gradient(135deg, #F97316, #EA580C)' },
+    { id: 'configuracoes', label: 'Ajustes', icon: '⚙️', gradient: 'linear-gradient(135deg, #EC4899, #BE185D)' }
   ];
 
   // Treinos cadastrados
@@ -81,13 +82,19 @@ export default function Home() {
     }
   ]);
 
-  // Histórico de Cargas (Aba Dados)
+  // Histórico de Cargas para os gráficos
   const exerciseHistory = {
     'ex_1': [{ week: 'Sem 1', weight: 14 }, { week: 'Sem 2', weight: 16 }, { week: 'Sem 3', weight: 18 }, { week: 'Sem 4', weight: 20 }],
     'ex_2': [{ week: 'Sem 1', weight: 4 }, { week: 'Sem 2', weight: 5 }, { week: 'Sem 3', weight: 5 }, { week: 'Sem 4', weight: 6 }]
   };
 
-  // Dias com treino feito no mês atual (Aba Dados)
+  // Histórico recente para o Início
+  const recentWorkouts = [
+    { title: 'Treino B - Superiores', date: 'Ontem, 18:30', duration: '45 min', color: '#A855F7' },
+    { title: 'Treino A - Inferiores', date: 'Segunda-feira', duration: '52 min', color: '#00D2FF' }
+  ];
+
+  // Dias concluídos no calendário (Aba Dados)
   const completedDaysInMonth = [2, 4, 7, 9, 11, 14, 16, 18, 21, 23, 25, 28];
 
   // Cronômetros
@@ -113,7 +120,7 @@ export default function Home() {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // Manipulação de Treinos
+  // Funções de Treino
   const addNewWorkout = () => {
     const colors = ['#00D2FF', '#A855F7', '#10B981', '#F59E0B', '#EC4899'];
     const randomColor = colors[workouts.length % colors.length];
@@ -247,7 +254,7 @@ export default function Home() {
       <div className="app-container">
         <main className="main-content">
           
-          {/* HEADER PRINCIPAL */}
+          {/* HEADER */}
           <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
             <div>
               <span style={{ fontSize: '0.7rem', color: '#A855F7', fontWeight: '800', letterSpacing: '1.5px' }}>PRO TRACKER</span>
@@ -284,14 +291,12 @@ export default function Home() {
           {activeTab === 'inicio' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
-              {/* CARD DE TREINO SUGERIDO DO DIA */}
+              {/* TREINO SUGERIDO */}
               <div style={{ 
                 background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)', 
                 padding: '22px', 
                 borderRadius: '26px', 
-                boxShadow: '0 12px 30px rgba(109, 40, 217, 0.35)',
-                position: 'relative',
-                overflow: 'hidden'
+                boxShadow: '0 12px 30px rgba(109, 40, 217, 0.35)'
               }}>
                 <span style={{ fontSize: '0.75rem', color: '#DDD6FE', fontWeight: '800', letterSpacing: '1px' }}>PRÓXIMO TREINO</span>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: '800', margin: '4px 0 2px 0', color: '#FFF' }}>Treino A</h2>
@@ -300,23 +305,15 @@ export default function Home() {
                 <button 
                   onClick={() => { setActiveTab('meus-treinos'); setActiveWorkout('TREINO_A'); }}
                   style={{ 
-                    width: '100%', 
-                    padding: '14px', 
-                    background: '#FFFFFF', 
-                    color: '#6D28D9', 
-                    border: 'none', 
-                    borderRadius: '16px', 
-                    fontWeight: '800', 
-                    fontSize: '0.9rem', 
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
+                    width: '100%', padding: '14px', background: '#FFFFFF', color: '#6D28D9', 
+                    border: 'none', borderRadius: '16px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer'
                   }}
                 >
                   ▶ INICIAR SESSÃO AGORA
                 </button>
               </div>
 
-              {/* REGISTRO DE ÁGUA / HIDRATAÇÃO */}
+              {/* HIDRATAÇÃO */}
               <div style={{ background: THEME.cardBg, padding: '20px', borderRadius: '24px', color: THEME.textPrimary, boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -329,26 +326,39 @@ export default function Home() {
                   <span style={{ fontSize: '1rem', fontWeight: '800', color: '#3B82F6' }}>{(waterIntake / 1000).toFixed(2)}L</span>
                 </div>
 
-                {/* BARRA DE PROGRESSO DE ÁGUA */}
                 <div style={{ width: '100%', height: '10px', background: THEME.inputBg, borderRadius: '6px', overflow: 'hidden', marginBottom: '14px' }}>
                   <div style={{ width: `${Math.min((waterIntake / waterGoal) * 100, 100)}%`, height: '100%', background: 'linear-gradient(90deg, #3B82F6, #60A5FA)', borderRadius: '6px', transition: 'width 0.3s ease' }} />
                 </div>
 
-                {/* BOTÕES DE ADIÇÃO RÁPIDA DE ÁGUA */}
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button onClick={() => setWaterIntake(p => p + 250)} style={{ flex: 1, padding: '10px', background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', borderRadius: '12px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer' }}>
-                    + 250 ml
-                  </button>
-                  <button onClick={() => setWaterIntake(p => p + 500)} style={{ flex: 1, padding: '10px', background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', borderRadius: '12px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer' }}>
-                    + 500 ml
-                  </button>
+                  <button onClick={() => setWaterIntake(p => p + 250)} style={{ flex: 1, padding: '10px', background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', borderRadius: '12px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer' }}>+ 250 ml</button>
+                  <button onClick={() => setWaterIntake(p => p + 500)} style={{ flex: 1, padding: '10px', background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', borderRadius: '12px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer' }}>+ 500 ml</button>
+                </div>
+              </div>
+
+              {/* HISTÓRICO RECENTE (ADICIONADO) */}
+              <div style={{ background: THEME.cardBg, padding: '20px', borderRadius: '24px', color: THEME.textPrimary, boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: '800', marginBottom: '14px' }}>Atividades Recentes</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {recentWorkouts.map((rw, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: THEME.inputBg, padding: '12px 14px', borderRadius: '14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: rw.color }} />
+                        <div>
+                          <h4 style={{ fontSize: '0.85rem', fontWeight: '800', margin: 0 }}>{rw.title}</h4>
+                          <span style={{ fontSize: '0.7rem', color: THEME.textSecondary }}>{rw.date}</span>
+                        </div>
+                      </div>
+                      <span style={{ fontSize: '0.75rem', fontWeight: '700', color: THEME.textSecondary }}>{rw.duration}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
             </div>
           )}
 
-          {/* 2. ABA DE TREINOS */}
+          {/* 2. ABA TREINOS */}
           {activeTab === 'meus-treinos' && (
             <>
               <div style={{ marginBottom: '20px' }}>
@@ -370,15 +380,9 @@ export default function Home() {
                   }}
                 >
                   <div style={{
-                    width: '42px',
-                    height: '42px',
-                    borderRadius: '14px',
+                    width: '42px', height: '42px', borderRadius: '14px',
                     background: isEditing ? 'rgba(255,255,255,0.2)' : 'linear-gradient(135deg, #8B5CF6, #EC4899)',
-                    color: '#FFF',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justify: 'center',
-                    fontSize: '1.2rem'
+                    color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem'
                   }}>
                     ⚙️
                   </div>
@@ -409,33 +413,12 @@ export default function Home() {
                   const isRunning = workoutSession?.workoutId === w.id;
 
                   return (
-                    <div key={w.id} style={{
-                      position: 'relative', 
-                      background: THEME.cardBg, 
-                      borderRadius: '24px',
-                      overflow: 'hidden',
-                      boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
-                      color: THEME.textPrimary
-                    }}>
-                      <div style={{ 
-                        position: 'absolute', 
-                        top: 0, 
-                        left: 0, 
-                        bottom: 0, 
-                        width: '8px', 
-                        background: isRunning ? '#10B981' : w.color
-                      }} />
+                    <div key={w.id} style={{ position: 'relative', background: THEME.cardBg, borderRadius: '24px', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', color: THEME.textPrimary }}>
+                      <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '8px', background: isRunning ? '#10B981' : w.color }} />
 
-                      <div 
-                        onClick={() => !isEditing && setActiveWorkout(isOpen ? null : w.id)}
-                        style={{ padding: '20px 20px 20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
-                      >
+                      <div onClick={() => !isEditing && setActiveWorkout(isOpen ? null : w.id)} style={{ padding: '20px 20px 20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1 }}>
-                          <div style={{ 
-                            width: '46px', height: '46px', borderRadius: '16px', 
-                            background: `${w.color}20`, color: w.color, 
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: 'bold' 
-                          }}>
+                          <div style={{ width: '46px', height: '46px', borderRadius: '16px', background: `${w.color}20`, color: w.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', fontWeight: 'bold' }}>
                             {w.icon}
                           </div>
                           <div>
@@ -463,11 +446,7 @@ export default function Home() {
                           {!isEditing && (
                             <button 
                               onClick={() => isRunning ? handleFinishWorkout() : setWorkoutSession({ workoutId: w.id, seconds: 0 })}
-                              style={{
-                                width: '100%', padding: '14px', borderRadius: '16px',
-                                background: isRunning ? '#10B981' : w.color, color: '#FFF', border: 'none', fontWeight: '800', cursor: 'pointer', marginBottom: '16px', fontSize: '0.85rem',
-                                boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
-                              }}
+                              style={{ width: '100%', padding: '14px', borderRadius: '16px', background: isRunning ? '#10B981' : w.color, color: '#FFF', border: 'none', fontWeight: '800', cursor: 'pointer', marginBottom: '16px', fontSize: '0.85rem' }}
                             >
                               {isRunning ? `✓ CONCLUIR SESSÃO (${formatTime(workoutSession.seconds)})` : '▶ INICIAR SESSÃO'}
                             </button>
@@ -544,27 +523,21 @@ export default function Home() {
                   <span style={{ fontSize: '0.75rem', color: '#3B82F6', fontWeight: '800' }}>Julho 2026</span>
                 </div>
                 
-                {/* CABEÇALHO DIAS DA SEMANA */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', textAlign: 'center', fontSize: '0.7rem', fontWeight: '700', color: THEME.textSecondary, marginBottom: '8px' }}>
                   <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
                 </div>
 
-                {/* GRID DE DIAS DO MÊS */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', textAlign: 'center' }}>
                   {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
                     const isDone = completedDaysInMonth.includes(day);
 
                     return (
                       <div key={day} style={{ 
-                        height: '36px', 
-                        borderRadius: '10px', 
+                        height: '36px', borderRadius: '10px', 
                         background: isDone ? 'linear-gradient(135deg, #10B981, #059669)' : THEME.inputBg,
                         color: isDone ? '#FFF' : THEME.textPrimary,
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justify: 'center',
-                        fontWeight: isDone ? '800' : '600',
-                        fontSize: '0.8rem'
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontWeight: isDone ? '800' : '600', fontSize: '0.8rem'
                       }}>
                         {day}
                       </div>
@@ -573,9 +546,19 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* EVOLUÇÃO DE CARGAS */}
+              {/* EVOLUÇÃO DE CARGAS COM SELETOR (ADICIONADO) */}
               <div style={{ background: THEME.cardBg, padding: '20px', borderRadius: '24px', color: THEME.textPrimary, boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: '800', marginBottom: '12px' }}>Evolução de Carga</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <h3 style={{ fontSize: '1rem', fontWeight: '800' }}>Evolução de Carga</h3>
+                  <select 
+                    value={selectedExerciseFilter} 
+                    onChange={(e) => setSelectedExerciseFilter(e.target.value)}
+                    style={{ background: THEME.inputBg, border: 'none', padding: '6px 10px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: '700', color: THEME.textPrimary, outline: 'none' }}
+                  >
+                    <option value="ex_1">Elevação Pélvica</option>
+                    <option value="ex_2">Desenvolvimento</option>
+                  </select>
+                </div>
 
                 <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '120px', paddingTop: '20px', paddingBottom: '10px', borderBottom: `1px solid ${THEME.inputBg}` }}>
                   {(exerciseHistory[selectedExerciseFilter] || []).map((item, idx) => (
@@ -596,28 +579,41 @@ export default function Home() {
             </div>
           )}
 
-          {/* 4. ABA PERFIL (ACOMPANHAMENTO FÍSICO) */}
+          {/* 4. ABA PERFIL (ACOMPANHAMENTO FÍSICO COMPLETO) */}
           {activeTab === 'perfil' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
               {/* METRICAS PRINCIPAIS */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div style={{ background: THEME.cardBg, padding: '16px', borderRadius: '20px', color: THEME.textPrimary }}>
-                  <span style={{ fontSize: '0.7rem', color: THEME.textSecondary, fontWeight: '700' }}>PESO ATUAL</span>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginTop: '4px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                <div style={{ background: THEME.cardBg, padding: '14px', borderRadius: '20px', color: THEME.textPrimary }}>
+                  <span style={{ fontSize: '0.65rem', color: THEME.textSecondary, fontWeight: '700' }}>PESO ATUAL</span>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px', marginTop: '4px' }}>
                     <input 
                       type="number" 
                       value={userProfile.weight} 
                       onChange={(e) => setUserProfile({ ...userProfile, weight: parseFloat(e.target.value) || 0 })}
-                      style={{ fontSize: '1.4rem', fontWeight: '800', border: 'none', background: 'transparent', width: '70px', color: THEME.textPrimary, outline: 'none' }}
+                      style={{ fontSize: '1.2rem', fontWeight: '800', border: 'none', background: 'transparent', width: '50px', color: THEME.textPrimary, outline: 'none' }}
                     />
-                    <span style={{ fontSize: '0.8rem', fontWeight: '700', color: THEME.textSecondary }}>kg</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: '700', color: THEME.textSecondary }}>kg</span>
                   </div>
                 </div>
 
-                <div style={{ background: THEME.cardBg, padding: '16px', borderRadius: '20px', color: THEME.textPrimary }}>
-                  <span style={{ fontSize: '0.7rem', color: THEME.textSecondary, fontWeight: '700' }}>IMC CALCULADO</span>
-                  <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#F97316', marginTop: '4px' }}>
+                <div style={{ background: THEME.cardBg, padding: '14px', borderRadius: '20px', color: THEME.textPrimary }}>
+                  <span style={{ fontSize: '0.65rem', color: THEME.textSecondary, fontWeight: '700' }}>% GORDURA</span>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px', marginTop: '4px' }}>
+                    <input 
+                      type="number" 
+                      value={userProfile.bf} 
+                      onChange={(e) => setUserProfile({ ...userProfile, bf: parseFloat(e.target.value) || 0 })}
+                      style={{ fontSize: '1.2rem', fontWeight: '800', border: 'none', background: 'transparent', width: '40px', color: THEME.textPrimary, outline: 'none' }}
+                    />
+                    <span style={{ fontSize: '0.7rem', fontWeight: '700', color: THEME.textSecondary }}>%</span>
+                  </div>
+                </div>
+
+                <div style={{ background: THEME.cardBg, padding: '14px', borderRadius: '20px', color: THEME.textPrimary }}>
+                  <span style={{ fontSize: '0.65rem', color: THEME.textSecondary, fontWeight: '700' }}>IMC</span>
+                  <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#F97316', marginTop: '4px' }}>
                     {bmi}
                   </div>
                 </div>
@@ -644,6 +640,21 @@ export default function Home() {
                       />
                     </div>
                   ))}
+                </div>
+              </div>
+
+              {/* COMPARATIVO DE FOTOS (ADICIONADO) */}
+              <div style={{ background: THEME.cardBg, padding: '20px', borderRadius: '24px', color: THEME.textPrimary, boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: '800', marginBottom: '14px' }}>Evolução Visual</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ background: THEME.inputBg, borderRadius: '16px', height: '140px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px dashed #CBD5E1', cursor: 'pointer' }}>
+                    <span style={{ fontSize: '1.5rem' }}>📷</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: '700', color: THEME.textSecondary, marginTop: '4px' }}>Mês Inicial</span>
+                  </div>
+                  <div style={{ background: THEME.inputBg, borderRadius: '16px', height: '140px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px dashed #CBD5E1', cursor: 'pointer' }}>
+                    <span style={{ fontSize: '1.5rem' }}>📸</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: '700', color: THEME.textSecondary, marginTop: '4px' }}>Mês Atual</span>
+                  </div>
                 </div>
               </div>
 
