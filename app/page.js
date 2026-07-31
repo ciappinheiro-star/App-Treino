@@ -31,21 +31,13 @@ const THEMES = {
   }
 };
 
-const SET_TYPES = {
-  'N': { label: 'Normal', color: '#10B981', short: 'N' },
-  'W': { label: 'Aquec.', color: '#FBBF24', short: 'W' },
-  'D': { label: 'Drop', color: '#F97316', short: 'D' },
-  'F': { label: 'Falha', color: '#EF4444', short: 'F' }
-};
-
 const INITIAL_WORKOUTS = [
   {
     id: 'TREINO_A', title: 'Treino A', category: 'Inferiores & Core', color: '#00D2FF', icon: '⚡',
     exercises: [
       { id: 'ex_1', name: 'Elevação Pélvica', notes: 'Pausa de 2s no topo', restType: 'compound', sets: [
-        { id: 1, type: 'W', prev: '-', weight: 20, reps: 12, completed: true },
-        { id: 2, type: 'N', prev: '-', weight: 20, reps: 12, completed: true },
-        { id: 3, type: 'N', prev: '20kg', weight: 20, reps: 12, completed: true }
+        { id: 1, type: 'N', prev: '-', weight: 20, reps: 12, completed: false },
+        { id: 2, type: 'N', prev: '-', weight: 20, reps: 12, completed: false }
       ]}
     ]
   }
@@ -55,6 +47,15 @@ const MONTH_NAMES = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
+
+// Helper para pegar a data local correta (evita bugs de fuso horário UTC à noite)
+const getLocalDate = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('inicio');
@@ -80,12 +81,12 @@ export default function Home() {
   // Carregamento Inicial
   useEffect(() => {
     try {
-      const todayStr = new Date().toLocaleDateString();
+      const todayStr = getLocalDate();
       const savedDate = localStorage.getItem('pro_last_date');
-      const savedWorkouts = localStorage.getItem('pro_workouts_v5');
-      const savedTotal = localStorage.getItem('pro_total_v5');
-      const savedProfile = localStorage.getItem('pro_profile_v5');
-      const savedHistory = localStorage.getItem('pro_history_v5');
+      const savedWorkouts = localStorage.getItem('pro_workouts_v7');
+      const savedTotal = localStorage.getItem('pro_total_v7');
+      const savedProfile = localStorage.getItem('pro_profile_v7');
+      const savedHistory = localStorage.getItem('pro_history_v7');
       
       if (savedWorkouts) setWorkouts(JSON.parse(savedWorkouts));
       if (savedTotal) setTotalCompleted(JSON.parse(savedTotal));
@@ -105,11 +106,11 @@ export default function Home() {
   // Salvamento
   useEffect(() => {
     if (!isLoaded) return;
-    localStorage.setItem('pro_workouts_v5', JSON.stringify(workouts));
-    localStorage.setItem('pro_total_v5', JSON.stringify(totalCompleted));
+    localStorage.setItem('pro_workouts_v7', JSON.stringify(workouts));
+    localStorage.setItem('pro_total_v7', JSON.stringify(totalCompleted));
     localStorage.setItem('pro_water', JSON.stringify(waterIntake));
-    localStorage.setItem('pro_profile_v5', JSON.stringify(userProfile));
-    localStorage.setItem('pro_history_v5', JSON.stringify(workoutHistory));
+    localStorage.setItem('pro_profile_v7', JSON.stringify(userProfile));
+    localStorage.setItem('pro_history_v7', JSON.stringify(workoutHistory));
   }, [workouts, totalCompleted, waterIntake, userProfile, workoutHistory, isLoaded]);
 
   const t = THEMES[userProfile.theme || 'dark'];
@@ -144,11 +145,22 @@ export default function Home() {
     return `${m}m`;
   };
 
-  const handleFinishWorkout = () => {
-    const todayISO = new Date().toISOString().split('T')[0];
-    setWorkoutHistory(prev => [...prev, { date: todayISO, duration: workoutSession.seconds }]);
+  // FINALIZAR TREINO: Registra a data, para o cronômetro e limpa os checks das séries
+  const handleFinishWorkout = (wId) => {
+    const todayStr = getLocalDate();
+    setWorkoutHistory(prev => [...prev, { date: todayStr, duration: workoutSession.seconds }]);
     setWorkoutSession(null);
+    setRestTimer(null); // Remove o relógio de descanso da tela
     setTotalCompleted(prev => prev + 1);
+
+    // Limpa os checks das séries para o próximo treino
+    setWorkouts(workouts.map(w => w.id === wId ? {
+      ...w,
+      exercises: w.exercises.map(ex => ({
+        ...ex,
+        sets: ex.sets.map(s => ({ ...s, completed: false }))
+      }))
+    } : w));
   };
 
   // Funções de Treino
@@ -165,16 +177,8 @@ export default function Home() {
   };
 
   const updateWorkoutField = (wId, field, value) => setWorkouts(workouts.map(w => w.id === wId ? { ...w, [field]: value } : w));
-  
-  const cycleSetType = (wId, exId, setIndex) => {
-    const sequence = ['N', 'W', 'D', 'F'];
-    setWorkouts(workouts.map(w => w.id === wId ? { ...w, exercises: w.exercises.map(ex => ex.id === exId ? { ...ex, sets: ex.sets.map((s, i) => {
-      if (i !== setIndex) return s;
-      const nextType = sequence[(sequence.indexOf(s.type || 'N') + 1) % sequence.length];
-      return { ...s, type: nextType };
-    }) } : ex) } : w));
-  };
 
+  // Check manual das séries para ativar descanso
   const toggleSetComplete = (wId, exId, setIndex, restType) => {
     if (isEditing) return;
     const restTime = restType === 'compound' ? userProfile.restCompound : userProfile.restNormal;
@@ -191,15 +195,19 @@ export default function Home() {
     return { ...ex, sets: [...ex.sets, { id: ex.sets.length + 1, type: 'N', prev: `${lastSet.weight}kg`, weight: lastSet.weight, reps: lastSet.reps, completed: false }] };
   }) } : w));
   
-  const updateSetData = (wId, exId, setIndex, field, value) => setWorkouts(workouts.map(w => w.id === wId ? { ...w, exercises: w.exercises.map(ex => ex.id === exId ? { ...ex, sets: ex.sets.map((s, i) => i === setIndex ? { ...s, [field]: value } : s) } : ex) } : w));
+  const updateSetData = (wId, exId, setIndex, field, value) => {
+    const numVal = parseFloat(value) || 0;
+    setWorkouts(workouts.map(w => w.id === wId ? { ...w, exercises: w.exercises.map(ex => ex.id === exId ? { ...ex, sets: ex.sets.map((s, i) => i === setIndex ? { ...s, [field]: numVal } : s) } : ex) } : w));
+  };
+
   const updateExerciseField = (wId, exId, field, value) => setWorkouts(workouts.map(w => w.id === wId ? { ...w, exercises: w.exercises.map(ex => ex.id === exId ? { ...ex, [field]: value } : ex) } : w));
 
   const toggleTheme = () => setUserProfile({ ...userProfile, theme: userProfile.theme === 'light' ? 'dark' : 'light' });
 
-  // Lógica de Estatísticas
+  // Lógica de Estatísticas Refinada
   const now = new Date();
   const currentMonthName = MONTH_NAMES[now.getMonth()];
-  const currentMonthStr = now.toISOString().slice(0, 7);
+  const currentMonthStr = getLocalDate().slice(0, 7); // Pega apenas "YYYY-MM"
   const thisMonthHistory = workoutHistory.filter(h => h.date.startsWith(currentMonthStr));
   
   const totalSecondsMonth = thisMonthHistory.reduce((acc, curr) => acc + curr.duration, 0);
@@ -210,9 +218,16 @@ export default function Home() {
   const startOfWeek = new Date(now);
   startOfWeek.setDate(now.getDate() - dayOfWeek);
   startOfWeek.setHours(0,0,0,0);
-  const thisWeekHistory = thisMonthHistory.filter(h => new Date(h.date) >= startOfWeek);
+  
+  // Filtro de semana considerando a Data correta
+  const thisWeekHistory = thisMonthHistory.filter(h => {
+    const [y, m, d] = h.date.split('-');
+    const workoutDate = new Date(y, m - 1, d);
+    return workoutDate >= startOfWeek;
+  });
   const totalSecondsWeek = thisWeekHistory.reduce((acc, curr) => acc + curr.duration, 0);
 
+  // Mapeia os dias concluídos
   const daysCompletedThisMonth = thisMonthHistory.map(h => parseInt(h.date.split('-')[2]));
 
   if (!isLoaded) return null;
@@ -223,6 +238,9 @@ export default function Home() {
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
         body { background: ${t.bgGradient}; min-height: 100vh; color: #FFF; background-attachment: fixed; transition: background 0.3s ease; }
+        button { transition: transform 0.1s ease, filter 0.2s ease; }
+        button:active { transform: scale(0.96); }
+        .tabular-num { font-variant-numeric: tabular-nums; }
       `}} />
 
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -243,7 +261,7 @@ export default function Home() {
             <div style={{ background: t.cardBg, padding: '8px 14px', borderRadius: '16px', border: `1px solid ${t.cardBorder}`, display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
               <div style={{ fontSize: '1.2rem' }}>🏋️</div>
               <div>
-                <span style={{ fontSize: '1.1rem', fontWeight: '900', display: 'block', lineHeight: '1', color: t.textPrimary }}>{totalCompleted}</span>
+                <span className="tabular-num" style={{ fontSize: '1.1rem', fontWeight: '900', display: 'block', lineHeight: '1', color: t.textPrimary }}>{totalCompleted}</span>
                 <span style={{ fontSize: '0.55rem', color: t.textSecondary, fontWeight: '800', letterSpacing: '0.5px' }}>TREINOS</span>
               </div>
             </div>
@@ -262,13 +280,15 @@ export default function Home() {
                 </button>
               </div>
 
-              {/* Semana Atual conforme o Print */}
+              {/* Semana Atual */}
               <div style={{ background: t.cardBg, padding: '24px', borderRadius: '28px', color: t.textPrimary, boxShadow: '0 4px 20px rgba(0,0,0,0.04)', border: `1px solid ${t.cardBorder}` }}>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: '900', marginBottom: '18px' }}>Semana Atual</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', textAlign: 'center' }}>
                   {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((dayLabel, index) => {
-                    const isToday = index === new Date().getDay();
-                    const isCompleted = daysCompletedThisMonth.includes(new Date().getDate() - (new Date().getDay() - index));
+                    const checkDate = new Date();
+                    checkDate.setDate(now.getDate() - (now.getDay() - index));
+                    const isToday = index === now.getDay();
+                    const isCompleted = daysCompletedThisMonth.includes(checkDate.getDate());
                     
                     return (
                       <div key={index} style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
@@ -298,7 +318,7 @@ export default function Home() {
                       <span style={{ fontSize: '0.75rem', color: t.textSecondary, fontWeight: '700' }}>Meta: {(userProfile.waterGoal / 1000).toFixed(1)}L</span>
                     </div>
                   </div>
-                  <span style={{ fontSize: '1.1rem', fontWeight: '900', color: '#3B82F6' }}>{(waterIntake / 1000).toFixed(2)}L</span>
+                  <span className="tabular-num" style={{ fontSize: '1.1rem', fontWeight: '900', color: '#3B82F6' }}>{(waterIntake / 1000).toFixed(2)}L</span>
                 </div>
                 <div style={{ width: '100%', height: '12px', background: t.inputBg, borderRadius: '6px', overflow: 'hidden', marginBottom: '16px' }}>
                   <div style={{ width: `${Math.min((waterIntake / userProfile.waterGoal) * 100, 100)}%`, height: '100%', background: '#3B82F6', borderRadius: '6px', transition: 'width 0.4s ease' }} />
@@ -326,7 +346,7 @@ export default function Home() {
 
               {restTimer > 0 && !isEditing && (
                 <div style={{ position: 'fixed', bottom: '95px', left: '50%', transform: 'translateX(-50%)', background: '#3B82F6', color: '#FFF', padding: '14px 28px', borderRadius: '24px', boxShadow: '0 8px 20px rgba(59, 130, 246, 0.4)', zIndex: 1000, fontWeight: '900', fontSize: '0.9rem', border: '2px solid rgba(255,255,255,0.2)' }}>
-                  ⏳ DESCANSO: {formatTime(restTimer)}
+                  ⏳ DESCANSO: <span className="tabular-num">{formatTime(restTimer)}</span>
                 </div>
               )}
 
@@ -361,7 +381,7 @@ export default function Home() {
                       {isOpen && (
                         <div style={{ padding: '0 20px 20px 28px', borderTop: `1px solid ${t.inputBg}`, paddingTop: '18px' }}>
                           {!isEditing && (
-                            <button onClick={() => isRunning ? handleFinishWorkout() : setWorkoutSession({ workoutId: w.id, seconds: 0 })} style={{ width: '100%', padding: '16px', borderRadius: '20px', background: isRunning ? '#10B981' : w.color, color: '#FFF', border: 'none', fontWeight: '900', cursor: 'pointer', marginBottom: '20px', fontSize: '0.9rem', boxShadow: '0 6px 16px rgba(0,0,0,0.15)' }}>
+                            <button onClick={() => isRunning ? handleFinishWorkout(w.id) : setWorkoutSession({ workoutId: w.id, seconds: 0 })} style={{ width: '100%', padding: '16px', borderRadius: '20px', background: isRunning ? '#10B981' : w.color, color: '#FFF', border: 'none', fontWeight: '900', cursor: 'pointer', marginBottom: '20px', fontSize: '0.9rem', boxShadow: '0 6px 16px rgba(0,0,0,0.15)' }}>
                               {isRunning ? `✓ FINALIZAR SESSÃO (${formatTime(workoutSession.seconds)})` : '▶ COMEÇAR SESSÃO'}
                             </button>
                           )}
@@ -383,22 +403,30 @@ export default function Home() {
                               </div>
                               <input type="text" value={ex.notes} onChange={(e) => updateExerciseField(w.id, ex.id, 'notes', e.target.value)} placeholder="Observações..." readOnly={!isEditing} style={{ width: '100%', background: 'transparent', border: 'none', fontSize: '0.8rem', color: t.textSecondary, marginBottom: '12px', outline: 'none', fontWeight: '600' }} />
                               
-                              <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 1fr 1fr 36px', gap: '6px', fontSize: '0.7rem', color: t.textSecondary, fontWeight: '800', textAlign: 'center', marginBottom: '8px' }}>
+                              <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 1fr 1fr 38px', gap: '6px', fontSize: '0.7rem', color: t.textSecondary, fontWeight: '800', textAlign: 'center', marginBottom: '8px' }}>
                                 <span>SET</span><span>ANT.</span><span>KG</span><span>REPS</span><span>✓</span>
                               </div>
                               
                               {ex.sets.map((set, idx) => {
                                 return (
-                                <div key={set.id} style={{ display: 'grid', gridTemplateColumns: '40px 1fr 1fr 1fr 36px', gap: '6px', alignItems: 'center', marginBottom: '8px', textAlign: 'center' }}>
+                                <div key={set.id} style={{ display: 'grid', gridTemplateColumns: '40px 1fr 1fr 1fr 38px', gap: '6px', alignItems: 'center', marginBottom: '8px', textAlign: 'center' }}>
                                   
                                   <span style={{ fontSize: '0.9rem', fontWeight: '900', color: '#10B981' }}>{idx + 1}</span>
 
                                   <span style={{ fontSize: '0.75rem', color: t.textSecondary, fontWeight: '600' }}>{set.prev || '-'}</span>
                                   
-                                  <input type="number" value={set.weight} onChange={(e) => updateSetData(w.id, ex.id, idx, 'weight', e.target.value)} readOnly={!isEditing && set.completed} style={{ width: '100%', textAlign: 'center', padding: '8px 2px', borderRadius: '12px', background: t.cardBg, border: `1px solid ${t.cardBorder}`, fontWeight: '800', fontSize: '0.9rem', color: t.textPrimary, outline: 'none' }} />
-                                  <input type="number" value={set.reps} onChange={(e) => updateSetData(w.id, ex.id, idx, 'reps', e.target.value)} readOnly={!isEditing && set.completed} style={{ width: '100%', textAlign: 'center', padding: '8px 2px', borderRadius: '12px', background: t.cardBg, border: `1px solid ${t.cardBorder}`, fontWeight: '800', fontSize: '0.9rem', color: t.textPrimary, outline: 'none' }} />
+                                  <input type="number" value={set.weight} onChange={(e) => updateSetData(w.id, ex.id, idx, 'weight', e.target.value)} style={{ width: '100%', textAlign: 'center', padding: '10px 2px', borderRadius: '12px', background: t.cardBg, border: `1px solid ${t.cardBorder}`, fontWeight: '800', fontSize: '0.9rem', color: t.textPrimary, outline: 'none' }} className="tabular-num" />
+                                  <input type="number" value={set.reps} onChange={(e) => updateSetData(w.id, ex.id, idx, 'reps', e.target.value)} style={{ width: '100%', textAlign: 'center', padding: '10px 2px', borderRadius: '12px', background: t.cardBg, border: `1px solid ${t.cardBorder}`, fontWeight: '800', fontSize: '0.9rem', color: t.textPrimary, outline: 'none' }} className="tabular-num" />
                                   
-                                  <div onClick={() => toggleSetComplete(w.id, ex.id, idx, ex.restType)} style={{ width: '32px', height: '32px', borderRadius: '10px', margin: '0 auto', background: set.completed ? '#10B981' : t.cardBg, border: `2px solid ${set.completed ? '#10B981' : t.textSecondary}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#FFF', fontWeight: 'bold', fontSize: '0.8rem' }}>
+                                  <div onClick={() => toggleSetComplete(w.id, ex.id, idx, ex.restType)} style={{
+                                    width: '38px', height: '38px', borderRadius: '12px', margin: '0 auto',
+                                    background: set.completed ? '#10B981' : t.cardBg,
+                                    border: `2px solid ${set.completed ? '#10B981' : t.textSecondary}`,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    cursor: 'pointer', color: '#FFF', fontWeight: 'bold', fontSize: '0.9rem',
+                                    boxShadow: set.completed ? '0 4px 14px rgba(16, 185, 129, 0.4)' : 'none',
+                                    transition: 'all 0.2s ease'
+                                  }}>
                                     {set.completed && '✓'}
                                   </div>
                                 </div>
@@ -417,26 +445,26 @@ export default function Home() {
             </>
           )}
 
-          {/* 3. ABA DADOS (Calendário Modernizado) */}
+          {/* 3. ABA DADOS */}
           {activeTab === 'estatisticas' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div style={{ background: t.cardBg, padding: '16px', borderRadius: '20px', border: `1px solid ${t.cardBorder}`, boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
                   <span style={{ fontSize: '0.75rem', color: t.textSecondary, fontWeight: '800', display: 'block', marginBottom: '4px' }}>TEMPO ESTA SEMANA</span>
-                  <span style={{ fontSize: '1.4rem', fontWeight: '900', color: '#3B82F6' }}>{formatDurationText(totalSecondsWeek)}</span>
+                  <span className="tabular-num" style={{ fontSize: '1.4rem', fontWeight: '900', color: '#3B82F6' }}>{formatDurationText(totalSecondsWeek)}</span>
                 </div>
                 <div style={{ background: t.cardBg, padding: '16px', borderRadius: '20px', border: `1px solid ${t.cardBorder}`, boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
                   <span style={{ fontSize: '0.75rem', color: t.textSecondary, fontWeight: '800', display: 'block', marginBottom: '4px' }}>MÉDIA DIÁRIA (MÊS)</span>
-                  <span style={{ fontSize: '1.4rem', fontWeight: '900', color: '#10B981' }}>{formatDurationText(avgSecondsDaily)}</span>
+                  <span className="tabular-num" style={{ fontSize: '1.4rem', fontWeight: '900', color: '#10B981' }}>{formatDurationText(avgSecondsDaily)}</span>
                 </div>
                 <div style={{ gridColumn: 'span 2', background: t.cardBg, padding: '16px', borderRadius: '20px', border: `1px solid ${t.cardBorder}`, boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
                    <span style={{ fontSize: '0.75rem', color: t.textSecondary, fontWeight: '800', display: 'block', marginBottom: '4px' }}>TEMPO TOTAL TREINADO NO MÊS</span>
-                   <span style={{ fontSize: '1.4rem', fontWeight: '900', color: t.textPrimary }}>{formatDurationText(totalSecondsMonth)}</span>
+                   <span className="tabular-num" style={{ fontSize: '1.4rem', fontWeight: '900', color: t.textPrimary }}>{formatDurationText(totalSecondsMonth)}</span>
                 </div>
               </div>
 
-              {/* Calendário Atualizado com Nome do Mês à Direita e Bolinhas Verdes */}
+              {/* Calendário */}
               <div style={{ background: t.cardBg, padding: '24px', borderRadius: '28px', color: t.textPrimary, boxShadow: '0 4px 20px rgba(0,0,0,0.04)', border: `1px solid ${t.cardBorder}` }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px' }}>
                   <h3 style={{ fontSize: '1.15rem', fontWeight: '900' }}>Calendário de Sucesso 🏆</h3>
@@ -477,21 +505,21 @@ export default function Home() {
                   <div key={i} style={{ background: t.cardBg, padding: '16px', borderRadius: '20px', color: t.textPrimary, border: `1px solid ${t.cardBorder}`, textAlign: 'center' }}>
                     <span style={{ fontSize: '0.65rem', color: t.textSecondary, fontWeight: '800', display: 'block', marginBottom: '6px' }}>{item.label}</span>
                     {item.field ? (
-                      <input type="number" value={userProfile[item.field]} onChange={(e) => setUserProfile({ ...userProfile, [item.field]: parseFloat(e.target.value) || 0 })} style={{ fontSize: '1.3rem', fontWeight: '900', border: 'none', background: 'transparent', width: '100%', color: t.textPrimary, outline: 'none', textAlign: 'center' }} />
+                      <input type="number" value={userProfile[item.field]} onChange={(e) => setUserProfile({ ...userProfile, [item.field]: parseFloat(e.target.value) || 0 })} style={{ fontSize: '1.3rem', fontWeight: '900', border: 'none', background: 'transparent', width: '100%', color: t.textPrimary, outline: 'none', textAlign: 'center' }} className="tabular-num" />
                     ) : (
-                      <div style={{ fontSize: '1.3rem', fontWeight: '900', color: item.color }}>{item.val}</div>
+                      <div className="tabular-num" style={{ fontSize: '1.3rem', fontWeight: '900', color: item.color }}>{item.val}</div>
                     )}
                   </div>
                 ))}
               </div>
 
-              <div style={{ background: t.cardBg, padding: '24px', borderRadius: '24px', color t.textPrimary, boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: `1px solid ${t.cardBorder}` }}>
+              <div style={{ background: t.cardBg, padding: '24px', borderRadius: '24px', color: t.textPrimary, boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: `1px solid ${t.cardBorder}` }}>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: '900', marginBottom: '16px' }}>Medidas Corporais (cm)</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   {[ { label: 'Braço', field: 'arm' }, { label: 'Peito', field: 'chest' }, { label: 'Ombros', field: 'shoulder' }, { label: 'Cintura', field: 'waist' }, { label: 'Quadril', field: 'hip' }, { label: 'Coxa', field: 'thigh' }, { label: 'Panturrilha', field: 'calf' } ].map((m) => (
                     <div key={m.field} style={{ background: t.inputBg, padding: '14px', borderRadius: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: '0.85rem', fontWeight: '800', color: t.textSecondary }}>{m.label}</span>
-                      <input type="number" value={userProfile[m.field]} onChange={(e) => setUserProfile({ ...userProfile, [m.field]: parseFloat(e.target.value) || 0 })} style={{ width: '50px', textAlign: 'right', background: 'transparent', border: 'none', fontWeight: '900', fontSize: '1rem', color: t.textPrimary, outline: 'none' }} />
+                      <input type="number" value={userProfile[m.field]} onChange={(e) => setUserProfile({ ...userProfile, [m.field]: parseFloat(e.target.value) || 0 })} style={{ width: '50px', textAlign: 'right', background: 'transparent', border: 'none', fontWeight: '900', fontSize: '1rem', color: t.textPrimary, outline: 'none' }} className="tabular-num" />
                     </div>
                   ))}
                 </div>
@@ -517,17 +545,17 @@ export default function Home() {
                 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: t.inputBg, padding: '16px', borderRadius: '16px', marginBottom: '12px' }}>
                   <span style={{ fontSize: '0.9rem', fontWeight: '800', color: t.textSecondary }}>Meta de Água (ml)</span>
-                  <input type="number" value={userProfile.waterGoal} onChange={(e) => setUserProfile({ ...userProfile, waterGoal: parseInt(e.target.value) || 0 })} style={{ width: '70px', textAlign: 'right', background: 'transparent', border: 'none', fontWeight: '900', fontSize: '1.1rem', color: '#3B82F6', outline: 'none' }} />
+                  <input type="number" value={userProfile.waterGoal} onChange={(e) => setUserProfile({ ...userProfile, waterGoal: parseInt(e.target.value) || 0 })} style={{ width: '70px', textAlign: 'right', background: 'transparent', border: 'none', fontWeight: '900', fontSize: '1.1rem', color: '#3B82F6', outline: 'none' }} className="tabular-num" />
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: t.inputBg, padding: '16px', borderRadius: '16px', marginBottom: '12px' }}>
                   <span style={{ fontSize: '0.9rem', fontWeight: '800', color: t.textSecondary }}>Descanso Normal (s)</span>
-                  <input type="number" value={userProfile.restNormal} onChange={(e) => setUserProfile({ ...userProfile, restNormal: parseInt(e.target.value) || 0 })} style={{ width: '70px', textAlign: 'right', background: 'transparent', border: 'none', fontWeight: '900', fontSize: '1.1rem', color: t.textPrimary, outline: 'none' }} />
+                  <input type="number" value={userProfile.restNormal} onChange={(e) => setUserProfile({ ...userProfile, restNormal: parseInt(e.target.value) || 0 })} style={{ width: '70px', textAlign: 'right', background: 'transparent', border: 'none', fontWeight: '900', fontSize: '1.1rem', color: t.textPrimary, outline: 'none' }} className="tabular-num" />
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: t.inputBg, padding: '16px', borderRadius: '16px' }}>
                   <span style={{ fontSize: '0.9rem', fontWeight: '800', color: t.textSecondary }}>Descanso Compostos (s)</span>
-                  <input type="number" value={userProfile.restCompound} onChange={(e) => setUserProfile({ ...userProfile, restCompound: parseInt(e.target.value) || 0 })} style={{ width: '70px', textAlign: 'right', background: 'transparent', border: 'none', fontWeight: '900', fontSize: '1.1rem', color: t.textPrimary, outline: 'none' }} />
+                  <input type="number" value={userProfile.restCompound} onChange={(e) => setUserProfile({ ...userProfile, restCompound: parseInt(e.target.value) || 0 })} style={{ width: '70px', textAlign: 'right', background: 'transparent', border: 'none', fontWeight: '900', fontSize: '1.1rem', color: t.textPrimary, outline: 'none' }} className="tabular-num" />
                 </div>
               </div>
             </div>
@@ -552,8 +580,7 @@ export default function Home() {
                   background: isActive ? item.gradient : 'transparent',
                   color: isActive ? t.navActiveText : t.navText,
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                  cursor: 'pointer', transition: 'all 0.3s ease',
-                  boxShadow: isActive ? '0 8px 20px rgba(0,0,0,0.2)' : 'none'
+                  cursor: 'pointer', boxShadow: isActive ? '0 8px 20px rgba(0,0,0,0.2)' : 'none'
                 }}
               >
                 <span style={{ fontSize: '1.4rem' }}>{item.icon}</span>
