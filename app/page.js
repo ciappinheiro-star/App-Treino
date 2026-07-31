@@ -48,7 +48,7 @@ const MONTH_NAMES = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
 
-// Helper para pegar a data local correta (evita bugs de fuso horário UTC à noite)
+// Helper para pegar a data local correta
 const getLocalDate = () => {
   const d = new Date();
   const year = d.getFullYear();
@@ -83,10 +83,10 @@ export default function Home() {
     try {
       const todayStr = getLocalDate();
       const savedDate = localStorage.getItem('pro_last_date');
-      const savedWorkouts = localStorage.getItem('pro_workouts_v7');
-      const savedTotal = localStorage.getItem('pro_total_v7');
-      const savedProfile = localStorage.getItem('pro_profile_v7');
-      const savedHistory = localStorage.getItem('pro_history_v7');
+      const savedWorkouts = localStorage.getItem('pro_workouts_v8');
+      const savedTotal = localStorage.getItem('pro_total_v8');
+      const savedProfile = localStorage.getItem('pro_profile_v8');
+      const savedHistory = localStorage.getItem('pro_history_v8');
       
       if (savedWorkouts) setWorkouts(JSON.parse(savedWorkouts));
       if (savedTotal) setTotalCompleted(JSON.parse(savedTotal));
@@ -106,11 +106,11 @@ export default function Home() {
   // Salvamento
   useEffect(() => {
     if (!isLoaded) return;
-    localStorage.setItem('pro_workouts_v7', JSON.stringify(workouts));
-    localStorage.setItem('pro_total_v7', JSON.stringify(totalCompleted));
+    localStorage.setItem('pro_workouts_v8', JSON.stringify(workouts));
+    localStorage.setItem('pro_total_v8', JSON.stringify(totalCompleted));
     localStorage.setItem('pro_water', JSON.stringify(waterIntake));
-    localStorage.setItem('pro_profile_v7', JSON.stringify(userProfile));
-    localStorage.setItem('pro_history_v7', JSON.stringify(workoutHistory));
+    localStorage.setItem('pro_profile_v8', JSON.stringify(userProfile));
+    localStorage.setItem('pro_history_v8', JSON.stringify(workoutHistory));
   }, [workouts, totalCompleted, waterIntake, userProfile, workoutHistory, isLoaded]);
 
   const t = THEMES[userProfile.theme || 'dark'];
@@ -145,15 +145,14 @@ export default function Home() {
     return `${m}m`;
   };
 
-  // FINALIZAR TREINO: Registra a data, para o cronômetro e limpa os checks das séries
+  // FINALIZAR TREINO
   const handleFinishWorkout = (wId) => {
     const todayStr = getLocalDate();
     setWorkoutHistory(prev => [...prev, { date: todayStr, duration: workoutSession.seconds }]);
     setWorkoutSession(null);
-    setRestTimer(null); // Remove o relógio de descanso da tela
+    setRestTimer(null);
     setTotalCompleted(prev => prev + 1);
 
-    // Limpa os checks das séries para o próximo treino
     setWorkouts(workouts.map(w => w.id === wId ? {
       ...w,
       exercises: w.exercises.map(ex => ({
@@ -178,7 +177,6 @@ export default function Home() {
 
   const updateWorkoutField = (wId, field, value) => setWorkouts(workouts.map(w => w.id === wId ? { ...w, [field]: value } : w));
 
-  // Check manual das séries para ativar descanso
   const toggleSetComplete = (wId, exId, setIndex, restType) => {
     if (isEditing) return;
     const restTime = restType === 'compound' ? userProfile.restCompound : userProfile.restNormal;
@@ -204,22 +202,23 @@ export default function Home() {
 
   const toggleTheme = () => setUserProfile({ ...userProfile, theme: userProfile.theme === 'light' ? 'dark' : 'light' });
 
-  // Lógica de Estatísticas Refinada
-  const now = new Date();
-  const currentMonthName = MONTH_NAMES[now.getMonth()];
-  const currentMonthStr = getLocalDate().slice(0, 7); // Pega apenas "YYYY-MM"
-  const thisMonthHistory = workoutHistory.filter(h => h.date.startsWith(currentMonthStr));
+  // Cálculo Dinâmico de Estatísticas e Calendário
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonthIdx = today.getMonth(); // 0 a 11
+  const currentMonthName = MONTH_NAMES[currentMonthIdx];
+  const currentMonthStr = `${currentYear}-${String(currentMonthIdx + 1).padStart(2, '0')}`;
   
+  const thisMonthHistory = workoutHistory.filter(h => h.date.startsWith(currentMonthStr));
   const totalSecondsMonth = thisMonthHistory.reduce((acc, curr) => acc + curr.duration, 0);
-  const currentDayOfMonth = now.getDate();
+  const currentDayOfMonth = today.getDate();
   const avgSecondsDaily = currentDayOfMonth > 0 ? totalSecondsMonth / currentDayOfMonth : 0;
   
-  const dayOfWeek = now.getDay(); 
-  const startOfWeek = new Date(now);
-  startOfWeek.setDate(now.getDate() - dayOfWeek);
+  const dayOfWeek = today.getDay(); 
+  const startOfWeek = new Date(today);
+  startOfWeek.setDate(today.getDate() - dayOfWeek);
   startOfWeek.setHours(0,0,0,0);
   
-  // Filtro de semana considerando a Data correta
   const thisWeekHistory = thisMonthHistory.filter(h => {
     const [y, m, d] = h.date.split('-');
     const workoutDate = new Date(y, m - 1, d);
@@ -227,8 +226,11 @@ export default function Home() {
   });
   const totalSecondsWeek = thisWeekHistory.reduce((acc, curr) => acc + curr.duration, 0);
 
-  // Mapeia os dias concluídos
   const daysCompletedThisMonth = thisMonthHistory.map(h => parseInt(h.date.split('-')[2]));
+
+  // Dados Específicos do Calendário Real do Mês Vigorante
+  const firstDayOfWeekInMonth = new Date(currentYear, currentMonthIdx, 1).getDay(); // Em qual dia da semana o mês começa
+  const daysInCurrentMonth = new Date(currentYear, currentMonthIdx + 1, 0).getDate(); // Total de dias no mês (28, 29, 30 ou 31)
 
   if (!isLoaded) return null;
 
@@ -286,8 +288,8 @@ export default function Home() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', textAlign: 'center' }}>
                   {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((dayLabel, index) => {
                     const checkDate = new Date();
-                    checkDate.setDate(now.getDate() - (now.getDay() - index));
-                    const isToday = index === now.getDay();
+                    checkDate.setDate(today.getDate() - (today.getDay() - index));
+                    const isToday = index === today.getDay();
                     const isCompleted = daysCompletedThisMonth.includes(checkDate.getDate());
                     
                     return (
@@ -445,7 +447,7 @@ export default function Home() {
             </>
           )}
 
-          {/* 3. ABA DADOS */}
+          {/* 3. ABA DADOS (Calendário Dinâmico e 100% Preciso) */}
           {activeTab === 'estatisticas' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
@@ -464,7 +466,7 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Calendário */}
+              {/* Calendário Dinâmico Exato */}
               <div style={{ background: t.cardBg, padding: '24px', borderRadius: '28px', color: t.textPrimary, boxShadow: '0 4px 20px rgba(0,0,0,0.04)', border: `1px solid ${t.cardBorder}` }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px' }}>
                   <h3 style={{ fontSize: '1.15rem', fontWeight: '900' }}>Calendário de Sucesso 🏆</h3>
@@ -476,13 +478,24 @@ export default function Home() {
                 </div>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px', textAlign: 'center' }}>
-                  {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
+                  {/* Espaços vazios iniciais para alinhar com o dia da semana correto */}
+                  {Array.from({ length: firstDayOfWeekInMonth }).map((_, i) => (
+                    <div key={`empty-${i}`} style={{ height: '42px' }} />
+                  ))}
+
+                  {/* Dias do Mês */}
+                  {Array.from({ length: daysInCurrentMonth }, (_, i) => i + 1).map((day) => {
                     const isDone = daysCompletedThisMonth.includes(day);
+                    const isToday = day === today.getDate();
+
                     return (
                       <div key={day} style={{
                         height: '42px', borderRadius: '50%',
-                        background: isDone ? 'linear-gradient(135deg, #10B981, #059669)' : 'rgba(241, 245, 249, 0.5)',
-                        color: isDone ? '#FFF' : t.textPrimary,
+                        background: isDone 
+                          ? 'linear-gradient(135deg, #10B981, #059669)' 
+                          : (isToday ? '#E0F2FE' : 'rgba(241, 245, 249, 0.5)'),
+                        color: isDone ? '#FFF' : (isToday ? '#0284C7' : t.textPrimary),
+                        border: isToday && !isDone ? '2px solid #3B82F6' : 'none',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontWeight: '800', fontSize: '0.95rem',
                         boxShadow: isDone ? '0 6px 14px rgba(16, 185, 129, 0.4)' : 'none',
