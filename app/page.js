@@ -1,50 +1,52 @@
 'use client';
 import { useState, useEffect } from 'react';
 
-// Paleta de Cores (Dark / Light)
+// Paleta de Cores (Dark / Light Neon)
 const THEMES = {
   dark: {
-    bgGradient: 'linear-gradient(180deg, #2E1065 0%, #1E1B4B 100%)',
-    cardBg: 'rgba(255, 255, 255, 0.95)',
-    cardBorder: 'rgba(255, 255, 255, 0.2)',
-    textPrimary: '#0F172A',
-    textSecondary: '#64748B',
-    inputBg: '#F1F5F9',
-    navBg: 'rgba(15, 23, 42, 0.85)',
-    navText: '#A1A1AA',
+    bgGradient: 'linear-gradient(180deg, #111827 0%, #000000 100%)',
+    cardBg: 'rgba(31, 41, 55, 0.95)',
+    cardBorder: 'rgba(255, 255, 255, 0.1)',
+    textPrimary: '#F9FAFB',
+    textSecondary: '#9CA3AF',
+    inputBg: '#374151',
+    navBg: 'rgba(17, 24, 39, 0.9)',
+    navText: '#6B7280',
     navActiveText: '#FFFFFF',
     pageTitle: '#FFFFFF',
-    pageSubtitle: '#A855F7'
+    pageSubtitle: '#10B981',
+    accent: '#10B981'
   },
   light: {
-    bgGradient: 'linear-gradient(180deg, #FDF4FF 0%, #F3E8FF 100%)', // Rosinha/Roxo pastel fofo
+    bgGradient: 'linear-gradient(180deg, #F8FAFC 0%, #E2E8F0 100%)',
     cardBg: '#FFFFFF',
-    cardBorder: 'rgba(216, 180, 254, 0.4)',
-    textPrimary: '#4C1D95',
-    textSecondary: '#9333EA',
-    inputBg: '#FAF5FF',
-    navBg: 'rgba(255, 255, 255, 0.85)',
-    navText: '#D8B4FE',
+    cardBorder: 'rgba(0, 0, 0, 0.1)',
+    textPrimary: '#0F172A', // Alto contraste
+    textSecondary: '#475569',
+    inputBg: '#F1F5F9',
+    navBg: 'rgba(255, 255, 255, 0.95)',
+    navText: '#94A3B8',
     navActiveText: '#FFFFFF',
-    pageTitle: '#4C1D95',
-    pageSubtitle: '#D946EF'
+    pageTitle: '#0F172A',
+    pageSubtitle: '#00FF66', // Neon Green
+    accent: '#3B82F6' // Neon Blue
   }
 };
 
 const SET_TYPES = {
-  'N': { label: 'Normal', color: '#10B981', icon: '✓', short: 'N' },
-  'W': { label: 'Aquec.', color: '#FBBF24', icon: '🔥', short: 'W' },
-  'D': { label: 'Drop', color: '#F97316', icon: '🔽', short: 'D' },
-  'F': { label: 'Falha', color: '#EF4444', icon: '💢', short: 'F' }
+  'N': { label: 'Normal', color: '#10B981', short: 'N' },
+  'W': { label: 'Aquec.', color: '#FBBF24', short: 'W' },
+  'D': { label: 'Drop', color: '#F97316', short: 'D' },
+  'F': { label: 'Falha', color: '#EF4444', short: 'F' }
 };
 
 const INITIAL_WORKOUTS = [
   {
-    id: 'TREINO_A', title: 'Treino A', category: 'Inferiores 🍑', color: '#00D2FF', icon: '⚡',
+    id: 'TREINO_A', title: 'Treino de Pernas', category: 'Inferiores', color: '#10B981', letter: 'A',
     exercises: [
-      { id: 'ex_1', name: 'Elevação Pélvica', notes: 'Pausa de 2s no topo', restType: 'compound', sets: [
-        { id: 1, type: 'W', prev: '-', weight: 10, reps: 15, completed: false },
-        { id: 2, type: 'N', prev: '-', weight: 20, reps: 12, completed: false }
+      { id: 'ex_1', name: 'Agachamento Livre', notes: '', restType: 'compound', sets: [
+        { id: 1, type: 'W', weight: 40, reps: 15, completed: false },
+        { id: 2, type: 'N', weight: 80, reps: 10, completed: false }
       ]}
     ]
   }
@@ -62,7 +64,9 @@ export default function Home() {
   const [totalCompleted, setTotalCompleted] = useState(0);
   const [waterIntake, setWaterIntake] = useState(0);
   const [workouts, setWorkouts] = useState(INITIAL_WORKOUTS);
-  const [completedDaysInMonth, setCompletedDaysInMonth] = useState([]);
+  
+  // Histórico para as novas estatísticas de tempo (Array de { date: 'YYYY-MM-DD', duration: seconds })
+  const [workoutHistory, setWorkoutHistory] = useState([]);
   
   // Perfil e Configurações Globais
   const [userProfile, setUserProfile] = useState({
@@ -76,15 +80,15 @@ export default function Home() {
     try {
       const todayStr = new Date().toLocaleDateString();
       const savedDate = localStorage.getItem('pro_last_date');
-      const savedWorkouts = localStorage.getItem('pro_workouts_v2');
-      const savedTotal = localStorage.getItem('pro_total');
-      const savedProfile = localStorage.getItem('pro_profile_v2');
-      const savedDays = localStorage.getItem('pro_days');
+      const savedWorkouts = localStorage.getItem('pro_workouts_v3');
+      const savedTotal = localStorage.getItem('pro_total_v3');
+      const savedProfile = localStorage.getItem('pro_profile_v3');
+      const savedHistory = localStorage.getItem('pro_history_v3');
       
       if (savedWorkouts) setWorkouts(JSON.parse(savedWorkouts));
       if (savedTotal) setTotalCompleted(JSON.parse(savedTotal));
       if (savedProfile) setUserProfile({ ...userProfile, ...JSON.parse(savedProfile) });
-      if (savedDays) setCompletedDaysInMonth(JSON.parse(savedDays));
+      if (savedHistory) setWorkoutHistory(JSON.parse(savedHistory));
 
       if (savedDate !== todayStr) {
         setWaterIntake(0);
@@ -99,21 +103,21 @@ export default function Home() {
   // Salvamento
   useEffect(() => {
     if (!isLoaded) return;
-    localStorage.setItem('pro_workouts_v2', JSON.stringify(workouts));
-    localStorage.setItem('pro_total', JSON.stringify(totalCompleted));
+    localStorage.setItem('pro_workouts_v3', JSON.stringify(workouts));
+    localStorage.setItem('pro_total_v3', JSON.stringify(totalCompleted));
     localStorage.setItem('pro_water', JSON.stringify(waterIntake));
-    localStorage.setItem('pro_profile_v2', JSON.stringify(userProfile));
-    localStorage.setItem('pro_days', JSON.stringify(completedDaysInMonth));
-  }, [workouts, totalCompleted, waterIntake, userProfile, completedDaysInMonth, isLoaded]);
+    localStorage.setItem('pro_profile_v3', JSON.stringify(userProfile));
+    localStorage.setItem('pro_history_v3', JSON.stringify(workoutHistory));
+  }, [workouts, totalCompleted, waterIntake, userProfile, workoutHistory, isLoaded]);
 
   const t = THEMES[userProfile.theme || 'dark'];
 
   const navItems = [
-    { id: 'inicio', label: 'Início', icon: '✨', gradient: 'linear-gradient(135deg, #10B981, #059669)' },
-    { id: 'meus-treinos', label: 'Treinos', icon: '💪', gradient: 'linear-gradient(135deg, #8B5CF6, #6D28D9)' },
-    { id: 'estatisticas', label: 'Dados', icon: '📈', gradient: 'linear-gradient(135deg, #3B82F6, #1D4ED8)' },
-    { id: 'perfil', label: 'Perfil', icon: '🌸', gradient: 'linear-gradient(135deg, #F97316, #EA580C)' },
-    { id: 'configuracoes', label: 'Ajustes', icon: '🎀', gradient: 'linear-gradient(135deg, #EC4899, #BE185D)' }
+    { id: 'inicio', label: 'Início', icon: '🏠', gradient: 'linear-gradient(135deg, #10B981, #059669)' },
+    { id: 'meus-treinos', label: 'Treinos', icon: '📋', gradient: 'linear-gradient(135deg, #3B82F6, #2563EB)' },
+    { id: 'estatisticas', label: 'Dados', icon: '📊', gradient: 'linear-gradient(135deg, #8B5CF6, #6D28D9)' },
+    { id: 'perfil', label: 'Perfil', icon: '👤', gradient: 'linear-gradient(135deg, #F97316, #EA580C)' },
+    { id: 'configuracoes', label: 'Ajustes', icon: '⚙️', gradient: 'linear-gradient(135deg, #475569, #334155)' }
   ];
 
   // Cronômetros
@@ -130,23 +134,32 @@ export default function Home() {
   }, [restTimer, isEditing]);
 
   const formatTime = (totalSec) => `${Math.floor(totalSec / 60).toString().padStart(2, '0')}:${(totalSec % 60).toString().padStart(2, '0')}`;
+  
+  const formatDurationText = (totalSecs) => {
+    const h = Math.floor(totalSecs / 3600);
+    const m = Math.floor((totalSecs % 3600) / 60);
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  };
 
   const handleFinishWorkout = () => {
+    const todayISO = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    setWorkoutHistory(prev => [...prev, { date: todayISO, duration: workoutSession.seconds }]);
     setWorkoutSession(null);
     setTotalCompleted(prev => prev + 1);
-    const today = new Date().getDate();
-    if (!completedDaysInMonth.includes(today)) setCompletedDaysInMonth([...completedDaysInMonth, today]);
   };
 
   // Funções de Treino
-  const addNewWorkout = () => setWorkouts([...workouts, { id: `W_${Date.now()}`, title: 'Novo Treino', category: 'Foco do dia', color: '#D946EF', icon: '💖', exercises: [] }]);
+  const addNewWorkout = () => {
+    const nextLetter = String.fromCharCode(65 + workouts.length);
+    setWorkouts([...workouts, { id: `W_${Date.now()}`, title: 'Novo Treino', category: 'Foco do dia', color: '#3B82F6', letter: nextLetter, exercises: [] }]);
+  };
   const deleteWorkout = (wId) => setWorkouts(workouts.filter(w => w.id !== wId));
-  const addNewExercise = (wId) => setWorkouts(workouts.map(w => w.id !== wId ? w : { ...w, exercises: [...w.exercises, { id: `E_${Date.now()}`, name: 'Novo Exercício', notes: '', restType: 'normal', sets: [{ id: 1, type: 'N', prev: '-', weight: 0, reps: 0, completed: false }] }] }));
+  const addNewExercise = (wId) => setWorkouts(workouts.map(w => w.id !== wId ? w : { ...w, exercises: [...w.exercises, { id: `E_${Date.now()}`, name: 'Novo Exercício', notes: '', restType: 'normal', sets: [{ id: 1, type: 'N', weight: 0, reps: 0, completed: false }] }] }));
   const deleteExercise = (wId, exId) => setWorkouts(workouts.map(w => w.id !== wId ? w : { ...w, exercises: w.exercises.filter(ex => ex.id !== exId) }));
   
-  // Substituição Rápida de Exercício (Prompt nativo simples)
   const quickSwapExercise = (wId, exId) => {
-    const newName = window.prompt("Qual o nome do novo exercício?");
+    const newName = window.prompt("Nome do exercício substituto:");
     if (newName && newName.trim() !== "") {
       setWorkouts(workouts.map(w => w.id === wId ? { ...w, exercises: w.exercises.map(ex => ex.id === exId ? { ...ex, name: newName } : ex) } : w));
     }
@@ -175,14 +188,32 @@ export default function Home() {
 
   const addSet = (wId, exId) => setWorkouts(workouts.map(w => w.id === wId ? { ...w, exercises: w.exercises.map(ex => {
     if (ex.id !== exId) return ex;
-    const lastSet = ex.sets[ex.sets.length - 1] || { weight: 0, reps: 0, prev: '-', type: 'N' };
-    return { ...ex, sets: [...ex.sets, { id: ex.sets.length + 1, type: 'N', prev: `${lastSet.weight}kg`, weight: lastSet.weight, reps: lastSet.reps, completed: false }] };
+    const lastSet = ex.sets[ex.sets.length - 1] || { weight: 0, reps: 0, type: 'N' };
+    return { ...ex, sets: [...ex.sets, { id: ex.sets.length + 1, type: 'N', weight: lastSet.weight, reps: lastSet.reps, completed: false }] };
   }) } : w));
   
   const updateSetData = (wId, exId, setIndex, field, value) => setWorkouts(workouts.map(w => w.id === wId ? { ...w, exercises: w.exercises.map(ex => ex.id === exId ? { ...ex, sets: ex.sets.map((s, i) => i === setIndex ? { ...s, [field]: value } : s) } : ex) } : w));
   const updateExerciseField = (wId, exId, field, value) => setWorkouts(workouts.map(w => w.id === wId ? { ...w, exercises: w.exercises.map(ex => ex.id === exId ? { ...ex, [field]: value } : ex) } : w));
 
   const toggleTheme = () => setUserProfile({ ...userProfile, theme: userProfile.theme === 'light' ? 'dark' : 'light' });
+
+  // Lógica de Estatísticas
+  const now = new Date();
+  const currentMonthStr = now.toISOString().slice(0, 7); // YYYY-MM
+  const thisMonthHistory = workoutHistory.filter(h => h.date.startsWith(currentMonthStr));
+  
+  const totalSecondsMonth = thisMonthHistory.reduce((acc, curr) => acc + curr.duration, 0);
+  const currentDayOfMonth = now.getDate();
+  const avgSecondsDaily = currentDayOfMonth > 0 ? totalSecondsMonth / currentDayOfMonth : 0;
+  
+  const dayOfWeek = now.getDay(); 
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - dayOfWeek);
+  startOfWeek.setHours(0,0,0,0);
+  const thisWeekHistory = thisMonthHistory.filter(h => new Date(h.date) >= startOfWeek);
+  const totalSecondsWeek = thisWeekHistory.reduce((acc, curr) => acc + curr.duration, 0);
+
+  const daysCompletedThisMonth = thisMonthHistory.map(h => parseInt(h.date.split('-')[2]));
 
   if (!isLoaded) return null;
 
@@ -191,7 +222,7 @@ export default function Home() {
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
-        body { background: ${t.bgGradient}; min-height: 100vh; color: #FFF; background-attachment: fixed; transition: background 0.5s ease; }
+        body { background: ${t.bgGradient}; min-height: 100vh; color: ${t.textPrimary}; background-attachment: fixed; transition: background 0.3s ease; }
       `}} />
 
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -200,20 +231,20 @@ export default function Home() {
           
           <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
             <div>
-              <span style={{ fontSize: '0.7rem', color: t.pageSubtitle, fontWeight: '900', letterSpacing: '1.5px' }}>PRO TRACKER 🎀</span>
+              <span style={{ fontSize: '0.7rem', color: t.pageSubtitle, fontWeight: '900', letterSpacing: '1.5px', textTransform: 'uppercase' }}>PRO TRACKER</span>
               <h1 style={{ fontSize: '1.7rem', color: t.pageTitle, fontWeight: '800', margin: '2px 0 0 0' }}>
-                {activeTab === 'inicio' && 'Oi, Linda! ✨'}
+                {activeTab === 'inicio' && 'Visão Geral'}
                 {activeTab === 'meus-treinos' && 'Fichas de Treino'}
-                {activeTab === 'estatisticas' && 'Meu Sucesso'}
+                {activeTab === 'estatisticas' && 'Desempenho'}
                 {activeTab === 'perfil' && 'Perfil Físico'}
                 {activeTab === 'configuracoes' && 'Ajustes'}
               </h1>
             </div>
-            <div style={{ background: t.cardBg, padding: '8px 14px', borderRadius: '20px', border: `1px solid ${t.cardBorder}`, display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-              <div style={{ width: '30px', height: '30px', borderRadius: '10px', background: 'linear-gradient(135deg, #10B981, #059669)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem', fontWeight: 'bold' }}>🔥</div>
+            <div style={{ background: t.cardBg, padding: '8px 14px', borderRadius: '16px', border: `1px solid ${t.cardBorder}`, display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+              <div style={{ fontSize: '1.2rem' }}>🏋️</div>
               <div>
                 <span style={{ fontSize: '1.1rem', fontWeight: '900', display: 'block', lineHeight: '1', color: t.textPrimary }}>{totalCompleted}</span>
-                <span style={{ fontSize: '0.55rem', color: t.textSecondary, fontWeight: '800' }}>SESSÕES</span>
+                <span style={{ fontSize: '0.55rem', color: t.textSecondary, fontWeight: '800', letterSpacing: '0.5px' }}>TREINOS</span>
               </div>
             </div>
           </header>
@@ -222,25 +253,36 @@ export default function Home() {
           {activeTab === 'inicio' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
-              <div style={{ background: 'linear-gradient(135deg, #8B5CF6, #D946EF)', padding: '24px', borderRadius: '30px', boxShadow: '0 12px 30px rgba(217, 70, 239, 0.3)' }}>
-                <span style={{ fontSize: '0.75rem', color: '#FDF4FF', fontWeight: '800', letterSpacing: '1px' }}>PRÓXIMO TREINO 🌸</span>
+              <div style={{ background: 'linear-gradient(135deg, #10B981, #059669)', padding: '24px', borderRadius: '24px', boxShadow: '0 8px 25px rgba(16, 185, 129, 0.3)' }}>
+                <span style={{ fontSize: '0.75rem', color: '#ECFDF5', fontWeight: '800', letterSpacing: '1px' }}>PRÓXIMO TREINO</span>
                 <h2 style={{ fontSize: '1.7rem', fontWeight: '900', margin: '4px 0 2px 0', color: '#FFF' }}>{workouts[0]?.title || 'Seu Treino'}</h2>
-                <p style={{ fontSize: '0.85rem', color: '#F3E8FF', marginBottom: '20px' }}>{workouts[0]?.category || 'Foco do dia'}</p>
-                <button onClick={() => { setActiveTab('meus-treinos'); setActiveWorkout(workouts[0]?.id); }} style={{ width: '100%', padding: '16px', background: '#FFFFFF', color: '#D946EF', border: 'none', borderRadius: '20px', fontWeight: '900', fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-                  ▶ BORA TREINAR!
+                <p style={{ fontSize: '0.85rem', color: '#D1FAE5', marginBottom: '20px' }}>{workouts[0]?.category || 'Foco do dia'}</p>
+                <button onClick={() => { setActiveTab('meus-treinos'); setActiveWorkout(workouts[0]?.id); }} style={{ width: '100%', padding: '16px', background: '#FFFFFF', color: '#059669', border: 'none', borderRadius: '16px', fontWeight: '900', fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                  ▶ INICIAR TREINO
                 </button>
               </div>
 
-              <div style={{ background: t.cardBg, padding: '20px', borderRadius: '30px', color: t.textPrimary, boxShadow: '0 10px 30px rgba(0,0,0,0.08)', border: `1px solid ${t.cardBorder}` }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: '900', marginBottom: '14px' }}>Semana Atual ✨</h3>
+              <div style={{ background: t.cardBg, padding: '20px', borderRadius: '24px', color: t.textPrimary, boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: `1px solid ${t.cardBorder}` }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: '900', marginBottom: '16px' }}>Semana Atual</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', textAlign: 'center' }}>
                   {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((dayLabel, index) => {
                     const isToday = index === new Date().getDay();
+                    const isCompleted = daysCompletedThisMonth.includes(new Date().getDate() - (new Date().getDay() - index)); // Simplificação visual para a semana
+                    
+                    let bgColor = t.inputBg;
+                    let icon = '-';
+                    if (isCompleted) {
+                      bgColor = '#10B981'; // Verde
+                      icon = '✓';
+                    } else if (isToday) {
+                      bgColor = '#F97316'; // Laranja pendente
+                    }
+
                     return (
                       <div key={index} style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.65rem', fontWeight: '800', color: isToday ? '#D946EF' : t.textSecondary }}>{dayLabel}</span>
-                        <div style={{ width: '34px', height: '34px', borderRadius: '12px', background: isToday ? '#D946EF' : t.inputBg, color: isToday ? '#FFF' : t.textSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '0.9rem', opacity: index > new Date().getDay() ? 0.4 : 1 }}>
-                          {index <= new Date().getDay() ? '💖' : '-'}
+                        <span style={{ fontSize: '0.65rem', fontWeight: '800', color: isToday ? t.textPrimary : t.textSecondary }}>{dayLabel}</span>
+                        <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: bgColor, color: (isCompleted || isToday) ? '#FFF' : t.textSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '0.9rem' }}>
+                          {icon}
                         </div>
                       </div>
                     );
@@ -248,23 +290,23 @@ export default function Home() {
                 </div>
               </div>
 
-              <div style={{ background: t.cardBg, padding: '20px', borderRadius: '30px', color: t.textPrimary, boxShadow: '0 10px 30px rgba(0,0,0,0.08)', border: `1px solid ${t.cardBorder}` }}>
+              <div style={{ background: t.cardBg, padding: '20px', borderRadius: '24px', color: t.textPrimary, boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: `1px solid ${t.cardBorder}` }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span style={{ fontSize: '1.5rem' }}>💧</span>
                     <div>
-                      <h3 style={{ fontSize: '1rem', fontWeight: '900' }}>Bebeu Água?</h3>
+                      <h3 style={{ fontSize: '1rem', fontWeight: '900' }}>Hidratação</h3>
                       <span style={{ fontSize: '0.75rem', color: t.textSecondary, fontWeight: '700' }}>Meta: {(userProfile.waterGoal / 1000).toFixed(1)}L</span>
                     </div>
                   </div>
                   <span style={{ fontSize: '1.1rem', fontWeight: '900', color: '#3B82F6' }}>{(waterIntake / 1000).toFixed(2)}L</span>
                 </div>
-                <div style={{ width: '100%', height: '12px', background: t.inputBg, borderRadius: '8px', overflow: 'hidden', marginBottom: '16px' }}>
-                  <div style={{ width: `${Math.min((waterIntake / userProfile.waterGoal) * 100, 100)}%`, height: '100%', background: 'linear-gradient(90deg, #3B82F6, #60A5FA)', borderRadius: '8px', transition: 'width 0.4s ease' }} />
+                <div style={{ width: '100%', height: '12px', background: t.inputBg, borderRadius: '6px', overflow: 'hidden', marginBottom: '16px' }}>
+                  <div style={{ width: `${Math.min((waterIntake / userProfile.waterGoal) * 100, 100)}%`, height: '100%', background: '#3B82F6', borderRadius: '6px', transition: 'width 0.4s ease' }} />
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button onClick={() => setWaterIntake(p => p + 250)} style={{ flex: 1, padding: '12px', background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', borderRadius: '16px', fontWeight: '900', fontSize: '0.8rem', cursor: 'pointer' }}>+ 250 ml</button>
-                  <button onClick={() => setWaterIntake(p => p + 500)} style={{ flex: 1, padding: '12px', background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', borderRadius: '16px', fontWeight: '900', fontSize: '0.8rem', cursor: 'pointer' }}>+ 500 ml</button>
+                  <button onClick={() => setWaterIntake(p => p + 250)} style={{ flex: 1, padding: '12px', background: userProfile.theme === 'light' ? '#3B82F6' : '#1E3A8A', color: '#FFF', border: 'none', borderRadius: '12px', fontWeight: '900', fontSize: '0.8rem', cursor: 'pointer' }}>+ 250 ml</button>
+                  <button onClick={() => setWaterIntake(p => p + 500)} style={{ flex: 1, padding: '12px', background: userProfile.theme === 'light' ? '#3B82F6' : '#1E3A8A', color: '#FFF', border: 'none', borderRadius: '12px', fontWeight: '900', fontSize: '0.8rem', cursor: 'pointer' }}>+ 500 ml</button>
                 </div>
               </div>
             </div>
@@ -274,17 +316,17 @@ export default function Home() {
           {activeTab === 'meus-treinos' && (
             <>
               <div style={{ marginBottom: '20px' }}>
-                <button onClick={() => { setIsEditing(!isEditing); setWorkoutSession(null); }} style={{ width: '100%', background: isEditing ? 'linear-gradient(135deg, #10B981, #059669)' : t.cardBg, color: isEditing ? '#FFF' : t.textPrimary, border: `1px solid ${isEditing ? 'transparent' : t.cardBorder}`, padding: '18px', borderRadius: '26px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <div style={{ width: '44px', height: '44px', borderRadius: '16px', background: isEditing ? 'rgba(255,255,255,0.2)' : 'linear-gradient(135deg, #8B5CF6, #D946EF)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>⚙️</div>
+                <button onClick={() => { setIsEditing(!isEditing); setWorkoutSession(null); }} style={{ width: '100%', background: isEditing ? '#10B981' : t.cardBg, color: isEditing ? '#FFF' : t.textPrimary, border: `1px solid ${isEditing ? 'transparent' : t.cardBorder}`, padding: '16px', borderRadius: '16px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: isEditing ? 'rgba(255,255,255,0.2)' : t.inputBg, color: isEditing ? '#FFF' : t.textPrimary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>⚙️</div>
                   <div style={{ textAlign: 'left' }}>
-                    <span style={{ fontSize: '0.95rem', display: 'block', fontWeight: '900' }}>{isEditing ? 'SALVAR ALTERAÇÕES ✨' : 'PERSONALIZAR FICHAS 🎀'}</span>
-                    <span style={{ fontSize: '0.75rem', color: isEditing ? '#E2E8F0' : t.textSecondary, fontWeight: '700' }}>{isEditing ? 'Concluir modificações' : 'Criar, editar e excluir treinos'}</span>
+                    <span style={{ fontSize: '0.95rem', display: 'block', fontWeight: '900' }}>{isEditing ? 'SALVAR ALTERAÇÕES' : 'EDITAR FICHAS'}</span>
+                    <span style={{ fontSize: '0.75rem', color: isEditing ? '#E2E8F0' : t.textSecondary, fontWeight: '700' }}>{isEditing ? 'Concluir modificações' : 'Criar, organizar e excluir'}</span>
                   </div>
                 </button>
               </div>
 
               {restTimer > 0 && !isEditing && (
-                <div style={{ position: 'fixed', bottom: '95px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg, #D946EF, #8B5CF6)', color: '#FFF', padding: '14px 28px', borderRadius: '30px', boxShadow: '0 10px 25px rgba(217, 70, 239, 0.4)', zIndex: 1000, fontWeight: '900', fontSize: '0.9rem', border: '2px solid rgba(255,255,255,0.2)' }}>
+                <div style={{ position: 'fixed', bottom: '95px', left: '50%', transform: 'translateX(-50%)', background: '#3B82F6', color: '#FFF', padding: '14px 28px', borderRadius: '24px', boxShadow: '0 8px 20px rgba(59, 130, 246, 0.4)', zIndex: 1000, fontWeight: '900', fontSize: '0.9rem', border: '2px solid rgba(255,255,255,0.2)' }}>
                   ⏳ DESCANSO: {formatTime(restTimer)}
                 </div>
               )}
@@ -295,16 +337,22 @@ export default function Home() {
                   const isRunning = workoutSession?.workoutId === w.id;
 
                   return (
-                    <div key={w.id} style={{ position: 'relative', background: t.cardBg, borderRadius: '30px', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.08)', border: `1px solid ${t.cardBorder}`, color: t.textPrimary }}>
-                      <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '10px', background: isRunning ? '#10B981' : w.color }} />
-                      <div onClick={() => !isEditing && setActiveWorkout(isOpen ? null : w.id)} style={{ padding: '22px 20px 22px 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                    <div key={w.id} style={{ position: 'relative', background: t.cardBg, borderRadius: '24px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: `1px solid ${t.cardBorder}`, color: t.textPrimary }}>
+                      <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '8px', background: isRunning ? '#10B981' : w.color }} />
+                      <div onClick={() => !isEditing && setActiveWorkout(isOpen ? null : w.id)} style={{ padding: '20px 20px 20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
-                          <div style={{ width: '48px', height: '48px', borderRadius: '18px', background: `${w.color}20`, color: w.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', fontWeight: 'bold' }}>{w.icon}</div>
+                          {/* Letra de Identificação */}
+                          <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: userProfile.theme === 'light' ? w.color : `${w.color}20`, color: userProfile.theme === 'light' ? '#FFF' : w.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: '900' }}>
+                            {w.letter}
+                          </div>
                           <div>
                             {isEditing ? (
                               <>
                                 <input value={w.title} onChange={(e) => updateWorkoutField(w.id, 'title', e.target.value)} style={{ background: 'transparent', border: `1px dashed ${t.textSecondary}`, fontWeight: '900', fontSize: '1.1rem', outline: 'none', width: '100%', color: t.textPrimary }} />
-                                <input value={w.category} onChange={(e) => updateWorkoutField(w.id, 'category', e.target.value)} style={{ background: 'transparent', border: `1px dashed ${t.textSecondary}`, fontSize: '0.8rem', color: t.textSecondary, outline: 'none', width: '100%', display: 'block', marginTop: '4px' }} />
+                                <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                                  <input value={w.letter} onChange={(e) => updateWorkoutField(w.id, 'letter', e.target.value.toUpperCase().slice(0,1))} style={{ background: 'transparent', border: `1px dashed ${t.textSecondary}`, fontSize: '0.8rem', color: t.textSecondary, outline: 'none', width: '30px', textAlign: 'center' }} />
+                                  <input value={w.category} onChange={(e) => updateWorkoutField(w.id, 'category', e.target.value)} style={{ background: 'transparent', border: `1px dashed ${t.textSecondary}`, fontSize: '0.8rem', color: t.textSecondary, outline: 'none', width: '100%' }} />
+                                </div>
                               </>
                             ) : (
                               <>
@@ -314,71 +362,81 @@ export default function Home() {
                             )}
                           </div>
                         </div>
-                        {isEditing && <button onClick={() => deleteWorkout(w.id)} style={{ background: '#FEE2E2', color: '#EF4444', border: 'none', width: '38px', height: '38px', borderRadius: '14px', cursor: 'pointer', fontWeight: 'bold' }}>✕</button>}
+                        {isEditing && <button onClick={() => deleteWorkout(w.id)} style={{ background: '#FEE2E2', color: '#EF4444', border: 'none', width: '38px', height: '38px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' }}>✕</button>}
                       </div>
 
                       {isOpen && (
-                        <div style={{ padding: '0 20px 20px 28px', borderTop: `1px solid ${t.inputBg}`, paddingTop: '18px' }}>
+                        <div style={{ padding: '0 20px 20px 24px', borderTop: `1px solid ${t.inputBg}`, paddingTop: '18px' }}>
                           {!isEditing && (
-                            <button onClick={() => isRunning ? handleFinishWorkout() : setWorkoutSession({ workoutId: w.id, seconds: 0 })} style={{ width: '100%', padding: '16px', borderRadius: '20px', background: isRunning ? '#10B981' : w.color, color: '#FFF', border: 'none', fontWeight: '900', cursor: 'pointer', marginBottom: '20px', fontSize: '0.9rem', boxShadow: '0 6px 16px rgba(0,0,0,0.15)' }}>
-                              {isRunning ? `✓ FINALIZAR SESSÃO (${formatTime(workoutSession.seconds)})` : '▶ COMEÇAR SESSÃO ✨'}
+                            <button onClick={() => isRunning ? handleFinishWorkout() : setWorkoutSession({ workoutId: w.id, seconds: 0 })} style={{ width: '100%', padding: '16px', borderRadius: '16px', background: isRunning ? '#10B981' : w.color, color: '#FFF', border: 'none', fontWeight: '900', cursor: 'pointer', marginBottom: '20px', fontSize: '0.9rem', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                              {isRunning ? `✓ CONCLUIR TREINO (${formatTime(workoutSession.seconds)})` : '▶ INICIAR SESSÃO'}
                             </button>
                           )}
 
                           {w.exercises.map((ex) => (
-                            <div key={ex.id} style={{ background: t.inputBg, padding: '16px', borderRadius: '22px', marginBottom: '14px', border: `1px solid ${t.cardBorder}` }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <div key={ex.id} style={{ marginBottom: '20px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                                 {isEditing ? (
-                                  <input value={ex.name} onChange={(e) => updateExerciseField(w.id, ex.id, 'name', e.target.value)} style={{ background: 'transparent', border: `1px dashed ${t.textSecondary}`, fontWeight: '900', outline: 'none', color: t.textPrimary, width: '100%' }} />
+                                  <input value={ex.name} onChange={(e) => updateExerciseField(w.id, ex.id, 'name', e.target.value)} style={{ background: 'transparent', border: `1px dashed ${t.textSecondary}`, fontWeight: '900', outline: 'none', color: t.textPrimary, width: '100%', fontSize: '1rem' }} />
                                 ) : (
-                                  <h4 style={{ margin: 0, color: t.textPrimary, fontSize: '1rem', fontWeight: '900' }}>{ex.name}</h4>
+                                  <h4 style={{ margin: 0, color: t.textPrimary, fontSize: '1rem', fontWeight: '800' }}>{ex.name}</h4>
                                 )}
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                   {!isEditing && isRunning && (
-                                    <button onClick={() => quickSwapExercise(w.id, ex.id)} style={{ background: 'transparent', color: '#3B82F6', border: 'none', cursor: 'pointer', fontSize: '1rem' }} title="Substituir Exercício">🔄</button>
+                                    <button onClick={() => quickSwapExercise(w.id, ex.id)} style={{ background: t.inputBg, padding: '4px 8px', borderRadius: '6px', color: t.textSecondary, border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '700' }} title="Substituir Exercício">Trocar</button>
                                   )}
                                   {isEditing && <button onClick={() => deleteExercise(w.id, ex.id)} style={{ background: 'transparent', color: '#EF4444', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}>Excluir</button>}
                                 </div>
                               </div>
-                              <input type="text" value={ex.notes} onChange={(e) => updateExerciseField(w.id, ex.id, 'notes', e.target.value)} placeholder="Anotações fofas aqui... 📝" readOnly={!isEditing} style={{ width: '100%', background: 'transparent', border: 'none', fontSize: '0.8rem', color: t.textSecondary, marginBottom: '12px', outline: 'none', fontWeight: '600' }} />
                               
-                              <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 1fr 1fr 36px', gap: '6px', fontSize: '0.7rem', color: t.textSecondary, fontWeight: '800', textAlign: 'center', marginBottom: '8px' }}>
-                                <span>TIPO</span><span>ANT.</span><span>KG</span><span>REPS</span><span>✓</span>
-                              </div>
-                              
+                              {/* Layout Clássico de Séries */}
                               {ex.sets.map((set, idx) => {
                                 const tag = SET_TYPES[set.type || 'N'];
-                                const btnColor = set.completed ? tag.color : t.cardBg;
+                                const btnColor = set.completed ? '#10B981' : 'transparent';
                                 
                                 return (
-                                <div key={set.id} style={{ display: 'grid', gridTemplateColumns: '40px 1fr 1fr 1fr 36px', gap: '6px', alignItems: 'center', marginBottom: '8px', textAlign: 'center' }}>
+                                <div key={set.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
                                   
-                                  {/* Botão de Tipo da Série */}
-                                  <button onClick={() => isEditing && cycleSetType(w.id, ex.id, idx)} style={{ width: '100%', padding: '6px 0', background: isEditing ? `${tag.color}20` : 'transparent', border: `1px solid ${isEditing ? tag.color : 'transparent'}`, borderRadius: '8px', color: tag.color, fontWeight: '900', fontSize: '0.75rem', cursor: isEditing ? 'pointer' : 'default' }}>
-                                    {tag.short}
-                                  </button>
-
-                                  <span style={{ fontSize: '0.75rem', color: t.textSecondary, fontWeight: '600' }}>{set.prev}</span>
-                                  
-                                  <input type="number" value={set.weight} onChange={(e) => updateSetData(w.id, ex.id, idx, 'weight', e.target.value)} readOnly={!isEditing && set.completed} style={{ width: '100%', textAlign: 'center', padding: '8px 2px', borderRadius: '10px', background: t.cardBg, border: `1px solid ${t.cardBorder}`, fontWeight: '800', fontSize: '0.9rem', color: t.textPrimary, outline: 'none' }} />
-                                  <input type="number" value={set.reps} onChange={(e) => updateSetData(w.id, ex.id, idx, 'reps', e.target.value)} readOnly={!isEditing && set.completed} style={{ width: '100%', textAlign: 'center', padding: '8px 2px', borderRadius: '10px', background: t.cardBg, border: `1px solid ${t.cardBorder}`, fontWeight: '800', fontSize: '0.9rem', color: t.textPrimary, outline: 'none' }} />
-                                  
-                                  {/* Botão de Check que muda de cor conforme a TAG */}
-                                  <div onClick={() => toggleSetComplete(w.id, ex.id, idx, ex.restType)} style={{ width: '32px', height: '32px', borderRadius: '10px', margin: '0 auto', background: btnColor, border: `2px solid ${set.completed ? tag.color : t.textSecondary}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }}>
-                                    {set.completed && <span style={{ color: '#FFF', fontWeight: 'bold', fontSize: '0.8rem' }}>{tag.icon}</span>}
+                                  <div style={{ background: t.inputBg, color: t.textSecondary, padding: '8px 12px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: '800', width: '50px', textAlign: 'center' }}>
+                                    {idx + 1}
                                   </div>
+
+                                  {isEditing && (
+                                    <button onClick={() => cycleSetType(w.id, ex.id, idx)} style={{ padding: '8px', background: `${tag.color}20`, border: `1px solid ${tag.color}`, borderRadius: '8px', color: tag.color, fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer' }}>
+                                      {tag.short}
+                                    </button>
+                                  )}
+                                  
+                                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', background: t.inputBg, borderRadius: '8px', padding: '0 8px' }}>
+                                    <input type="number" value={set.weight} onChange={(e) => updateSetData(w.id, ex.id, idx, 'weight', e.target.value)} readOnly={!isEditing && set.completed} style={{ width: '50%', textAlign: 'center', padding: '8px', background: 'transparent', border: 'none', fontWeight: '800', fontSize: '0.9rem', color: t.textPrimary, outline: 'none' }} />
+                                    <span style={{ fontSize: '0.7rem', color: t.textSecondary, fontWeight: '700' }}>kg</span>
+                                  </div>
+
+                                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', background: t.inputBg, borderRadius: '8px', padding: '0 8px' }}>
+                                    <input type="number" value={set.reps} onChange={(e) => updateSetData(w.id, ex.id, idx, 'reps', e.target.value)} readOnly={!isEditing && set.completed} style={{ width: '50%', textAlign: 'center', padding: '8px', background: 'transparent', border: 'none', fontWeight: '800', fontSize: '0.9rem', color: t.textPrimary, outline: 'none' }} />
+                                    <span style={{ fontSize: '0.7rem', color: t.textSecondary, fontWeight: '700' }}>reps</span>
+                                  </div>
+                                  
+                                  {/* Botão de Check Clássico */}
+                                  <button onClick={() => toggleSetComplete(w.id, ex.id, idx, ex.restType)} style={{ width: '40px', height: '36px', borderRadius: '8px', background: btnColor, border: `2px solid ${set.completed ? '#10B981' : t.textSecondary}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#FFF', fontWeight: 'bold' }}>
+                                    {set.completed && '✓'}
+                                  </button>
                                 </div>
                               )})}
-                              <button onClick={() => addSet(w.id, ex.id)} style={{ width: '100%', marginTop: '10px', padding: '10px', background: 'transparent', border: `2px dashed ${t.cardBorder}`, color: t.textSecondary, borderRadius: '12px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: '800' }}>+ Adicionar Série 🌸</button>
+                              {isEditing && (
+                                <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                                  <button onClick={() => addSet(w.id, ex.id)} style={{ flex: 1, padding: '8px', background: 'transparent', border: `2px dashed ${t.cardBorder}`, color: t.textSecondary, borderRadius: '8px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: '800' }}>+ Adicionar Série</button>
+                                </div>
+                              )}
                             </div>
                           ))}
-                          {isEditing && <button onClick={() => addNewExercise(w.id)} style={{ width: '100%', padding: '14px', background: '#ECFDF5', color: '#059669', border: 'none', borderRadius: '16px', fontWeight: '900', fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(5, 150, 105, 0.2)' }}>+ NOVO EXERCÍCIO</button>}
+                          {isEditing && <button onClick={() => addNewExercise(w.id)} style={{ width: '100%', padding: '14px', background: t.inputBg, color: t.textPrimary, border: 'none', borderRadius: '12px', fontWeight: '900', fontSize: '0.85rem', cursor: 'pointer' }}>+ NOVO EXERCÍCIO</button>}
                         </div>
                       )}
                     </div>
                   );
                 })}
-                {isEditing && <button onClick={addNewWorkout} style={{ width: '100%', padding: '18px', background: 'transparent', color: t.textPrimary, border: `2px dashed ${t.textSecondary}`, borderRadius: '26px', fontWeight: '900', cursor: 'pointer', fontSize: '0.95rem' }}>+ CRIAR TREINO 🎀</button>}
+                {isEditing && <button onClick={addNewWorkout} style={{ width: '100%', padding: '18px', background: 'transparent', color: t.textPrimary, border: `2px dashed ${t.textSecondary}`, borderRadius: '24px', fontWeight: '900', cursor: 'pointer', fontSize: '0.95rem' }}>+ CRIAR NOVO TREINO</button>}
               </div>
             </>
           )}
@@ -386,19 +444,38 @@ export default function Home() {
           {/* 3. ABA DADOS */}
           {activeTab === 'estatisticas' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={{ background: t.cardBg, padding: '24px', borderRadius: '30px', color: t.textPrimary, boxShadow: '0 10px 30px rgba(0,0,0,0.08)', border: `1px solid ${t.cardBorder}` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: '900' }}>Calendário de Sucesso 🏆</h3>
-                  <span style={{ fontSize: '0.8rem', color: '#D946EF', fontWeight: '900' }}>Mês Atual</span>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ background: t.cardBg, padding: '16px', borderRadius: '20px', border: `1px solid ${t.cardBorder}`, boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
+                  <span style={{ fontSize: '0.75rem', color: t.textSecondary, fontWeight: '800', display: 'block', marginBottom: '4px' }}>TEMPO ESTA SEMANA</span>
+                  <span style={{ fontSize: '1.4rem', fontWeight: '900', color: '#3B82F6' }}>{formatDurationText(totalSecondsWeek)}</span>
                 </div>
+                <div style={{ background: t.cardBg, padding: '16px', borderRadius: '20px', border: `1px solid ${t.cardBorder}`, boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
+                  <span style={{ fontSize: '0.75rem', color: t.textSecondary, fontWeight: '800', display: 'block', marginBottom: '4px' }}>MÉDIA DIÁRIA (MÊS)</span>
+                  <span style={{ fontSize: '1.4rem', fontWeight: '900', color: '#10B981' }}>{formatDurationText(avgSecondsDaily)}</span>
+                </div>
+                <div style={{ gridColumn: 'span 2', background: t.cardBg, padding: '16px', borderRadius: '20px', border: `1px solid ${t.cardBorder}`, boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
+                   <span style={{ fontSize: '0.75rem', color: t.textSecondary, fontWeight: '800', display: 'block', marginBottom: '4px' }}>TEMPO TOTAL TREINADO NO MÊS</span>
+                   <span style={{ fontSize: '1.4rem', fontWeight: '900', color: t.textPrimary }}>{formatDurationText(totalSecondsMonth)}</span>
+                </div>
+              </div>
+
+              <div style={{ background: t.cardBg, padding: '24px', borderRadius: '24px', color: t.textPrimary, boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: `1px solid ${t.cardBorder}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: '900' }}>Calendário Mensal</h3>
+                  <span style={{ fontSize: '0.8rem', color: '#10B981', fontWeight: '900', background: '#10B98120', padding: '4px 10px', borderRadius: '8px' }}>Mês {now.getMonth() + 1}</span>
+                </div>
+                
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', textAlign: 'center', fontSize: '0.75rem', fontWeight: '800', color: t.textSecondary, marginBottom: '12px' }}>
                   <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
                 </div>
+                
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px', textAlign: 'center' }}>
+                  {/* Simplificação do calendário para 31 dias para visualização */}
                   {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
-                    const isDone = completedDaysInMonth.includes(day);
+                    const isDone = daysCompletedThisMonth.includes(day);
                     return (
-                      <div key={day} style={{ height: '40px', borderRadius: '14px', background: isDone ? 'linear-gradient(135deg, #10B981, #059669)' : t.inputBg, color: isDone ? '#FFF' : t.textPrimary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '0.9rem', boxShadow: isDone ? '0 4px 10px rgba(16, 185, 129, 0.3)' : 'none' }}>
+                      <div key={day} style={{ height: '40px', borderRadius: '12px', background: isDone ? '#10B981' : t.inputBg, color: isDone ? '#FFF' : t.textPrimary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '0.9rem', boxShadow: isDone ? '0 4px 10px rgba(16, 185, 129, 0.3)' : 'none' }}>
                         {day}
                       </div>
                     );
@@ -412,8 +489,8 @@ export default function Home() {
           {activeTab === 'perfil' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-                {[ { label: 'PESO (kg)', field: 'weight' }, { label: '% GORDURA', field: 'bf' }, { label: 'IMC', val: (userProfile.weight / (userProfile.height * userProfile.height)).toFixed(1), color: '#F97316' } ].map((item, i) => (
-                  <div key={i} style={{ background: t.cardBg, padding: '16px', borderRadius: '24px', color: t.textPrimary, border: `1px solid ${t.cardBorder}`, textAlign: 'center' }}>
+                {[ { label: 'PESO (kg)', field: 'weight' }, { label: '% GORDURA', field: 'bf' }, { label: 'IMC', val: (userProfile.weight / (userProfile.height * userProfile.height)).toFixed(1), color: '#3B82F6' } ].map((item, i) => (
+                  <div key={i} style={{ background: t.cardBg, padding: '16px', borderRadius: '20px', color: t.textPrimary, border: `1px solid ${t.cardBorder}`, textAlign: 'center' }}>
                     <span style={{ fontSize: '0.65rem', color: t.textSecondary, fontWeight: '800', display: 'block', marginBottom: '6px' }}>{item.label}</span>
                     {item.field ? (
                       <input type="number" value={userProfile[item.field]} onChange={(e) => setUserProfile({ ...userProfile, [item.field]: parseFloat(e.target.value) || 0 })} style={{ fontSize: '1.3rem', fontWeight: '900', border: 'none', background: 'transparent', width: '100%', color: t.textPrimary, outline: 'none', textAlign: 'center' }} />
@@ -424,11 +501,11 @@ export default function Home() {
                 ))}
               </div>
 
-              <div style={{ background: t.cardBg, padding: '24px', borderRadius: '30px', color: t.textPrimary, boxShadow: '0 10px 30px rgba(0,0,0,0.08)', border: `1px solid ${t.cardBorder}` }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: '900', marginBottom: '16px' }}>Medidas Fofas (cm) 📏</h3>
+              <div style={{ background: t.cardBg, padding: '24px', borderRadius: '24px', color: t.textPrimary, boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: `1px solid ${t.cardBorder}` }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '900', marginBottom: '16px' }}>Medidas Corporais (cm)</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   {[ { label: 'Braço', field: 'arm' }, { label: 'Peito', field: 'chest' }, { label: 'Ombros', field: 'shoulder' }, { label: 'Cintura', field: 'waist' }, { label: 'Quadril', field: 'hip' }, { label: 'Coxa', field: 'thigh' }, { label: 'Panturrilha', field: 'calf' } ].map((m) => (
-                    <div key={m.field} style={{ background: t.inputBg, padding: '14px', borderRadius: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: `1px solid ${t.cardBorder}` }}>
+                    <div key={m.field} style={{ background: t.inputBg, padding: '14px', borderRadius: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: '0.85rem', fontWeight: '800', color: t.textSecondary }}>{m.label}</span>
                       <input type="number" value={userProfile[m.field]} onChange={(e) => setUserProfile({ ...userProfile, [m.field]: parseFloat(e.target.value) || 0 })} style={{ width: '50px', textAlign: 'right', background: 'transparent', border: 'none', fontWeight: '900', fontSize: '1rem', color: t.textPrimary, outline: 'none' }} />
                     </div>
@@ -442,31 +519,31 @@ export default function Home() {
           {activeTab === 'configuracoes' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
-              <div style={{ background: t.cardBg, padding: '24px', borderRadius: '30px', color: t.textPrimary, boxShadow: '0 10px 30px rgba(0,0,0,0.08)', border: `1px solid ${t.cardBorder}` }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: '900', marginBottom: '16px' }}>Aparência 💅</h3>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: t.inputBg, padding: '16px', borderRadius: '20px' }}>
+              <div style={{ background: t.cardBg, padding: '24px', borderRadius: '24px', color: t.textPrimary, boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: `1px solid ${t.cardBorder}` }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '900', marginBottom: '16px' }}>Interface</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: t.inputBg, padding: '16px', borderRadius: '16px' }}>
                   <span style={{ fontSize: '0.9rem', fontWeight: '800', color: t.textPrimary }}>Tema do App</span>
-                  <button onClick={toggleTheme} style={{ padding: '8px 16px', borderRadius: '12px', background: userProfile.theme === 'light' ? '#D946EF' : '#2E1065', color: '#FFF', fontWeight: '900', border: 'none', cursor: 'pointer' }}>
-                    {userProfile.theme === 'light' ? 'Modo Claro 🌸' : 'Modo Escuro 🌙'}
+                  <button onClick={toggleTheme} style={{ padding: '10px 20px', borderRadius: '12px', background: userProfile.theme === 'light' ? '#0F172A' : '#10B981', color: '#FFF', fontWeight: '900', border: 'none', cursor: 'pointer' }}>
+                    {userProfile.theme === 'light' ? 'Modo Escuro' : 'Modo Claro'}
                   </button>
                 </div>
               </div>
 
-              <div style={{ background: t.cardBg, padding: '24px', borderRadius: '30px', color: t.textPrimary, boxShadow: '0 10px 30px rgba(0,0,0,0.08)', border: `1px solid ${t.cardBorder}` }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: '900', marginBottom: '16px' }}>Configurações Globais ⚙️</h3>
+              <div style={{ background: t.cardBg, padding: '24px', borderRadius: '24px', color: t.textPrimary, boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: `1px solid ${t.cardBorder}` }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '900', marginBottom: '16px' }}>Preferências de Treino</h3>
                 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: t.inputBg, padding: '14px 16px', borderRadius: '20px', marginBottom: '12px' }}>
-                  <span style={{ fontSize: '0.9rem', fontWeight: '800', color: t.textSecondary }}>💧 Água Diária (ml)</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: t.inputBg, padding: '16px', borderRadius: '16px', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '0.9rem', fontWeight: '800', color: t.textSecondary }}>Meta de Água (ml)</span>
                   <input type="number" value={userProfile.waterGoal} onChange={(e) => setUserProfile({ ...userProfile, waterGoal: parseInt(e.target.value) || 0 })} style={{ width: '70px', textAlign: 'right', background: 'transparent', border: 'none', fontWeight: '900', fontSize: '1.1rem', color: '#3B82F6', outline: 'none' }} />
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: t.inputBg, padding: '14px 16px', borderRadius: '20px', marginBottom: '12px' }}>
-                  <span style={{ fontSize: '0.9rem', fontWeight: '800', color: t.textSecondary }}>⏱ Descanso Normal (s)</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: t.inputBg, padding: '16px', borderRadius: '16px', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '0.9rem', fontWeight: '800', color: t.textSecondary }}>Descanso Normal (s)</span>
                   <input type="number" value={userProfile.restNormal} onChange={(e) => setUserProfile({ ...userProfile, restNormal: parseInt(e.target.value) || 0 })} style={{ width: '70px', textAlign: 'right', background: 'transparent', border: 'none', fontWeight: '900', fontSize: '1.1rem', color: t.textPrimary, outline: 'none' }} />
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: t.inputBg, padding: '14px 16px', borderRadius: '20px' }}>
-                  <span style={{ fontSize: '0.9rem', fontWeight: '800', color: t.textSecondary }}>🔥 Descanso Compostos (s)</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: t.inputBg, padding: '16px', borderRadius: '16px' }}>
+                  <span style={{ fontSize: '0.9rem', fontWeight: '800', color: t.textSecondary }}>Descanso Compostos (s)</span>
                   <input type="number" value={userProfile.restCompound} onChange={(e) => setUserProfile({ ...userProfile, restCompound: parseInt(e.target.value) || 0 })} style={{ width: '70px', textAlign: 'right', background: 'transparent', border: 'none', fontWeight: '900', fontSize: '1.1rem', color: t.textPrimary, outline: 'none' }} />
                 </div>
               </div>
@@ -486,17 +563,16 @@ export default function Home() {
             return (
               <button key={item.id} onClick={() => setActiveTab(item.id)} 
                 style={{
-                  width: '58px', height: '58px', borderRadius: '20px',
+                  width: '58px', height: '58px', borderRadius: '16px',
                   border: isActive ? 'none' : 'transparent',
                   background: isActive ? item.gradient : 'transparent',
                   color: isActive ? t.navActiveText : t.navText,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                  cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: isActive ? '0 8px 20px rgba(0,0,0,0.15)' : 'none',
-                  transform: isActive ? 'translateY(-4px)' : 'none'
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  cursor: 'pointer', transition: 'all 0.3s ease',
+                  boxShadow: isActive ? '0 4px 12px rgba(0,0,0,0.1)' : 'none'
                 }}
               >
-                <span style={{ fontSize: '1.3rem', filter: isActive ? 'none' : 'grayscale(100%) opacity(60%)' }}>{item.icon}</span>
+                <span style={{ fontSize: '1.4rem', filter: isActive ? 'none' : 'grayscale(100%) opacity(70%)' }}>{item.icon}</span>
                 <span style={{ fontSize: '0.6rem', fontWeight: '900' }}>{item.label}</span>
               </button>
             );
