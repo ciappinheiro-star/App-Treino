@@ -4,12 +4,12 @@ import { useState, useEffect } from 'react';
 // Paleta de Cores
 const THEMES = {
   dark: {
-    bgGradient: 'linear-gradient(180deg, #2E1065 0%, #1E1B4B 100%)', // Roxo Escuro Original
+    bgGradient: 'linear-gradient(180deg, #2E1065 0%, #1E1B4B 100%)',
     cardBg: '#FFFFFF',
     cardBorder: 'rgba(255, 255, 255, 0.2)',
     textPrimary: '#0F172A',
     textSecondary: '#64748B',
-    inputBg: '#F1F5F9',
+    inputBg: '#F8FAFC',
     navBg: 'rgba(15, 23, 42, 0.85)',
     navText: '#A1A1AA',
     navActiveText: '#FFFFFF',
@@ -82,10 +82,10 @@ export default function Home() {
     try {
       const todayStr = new Date().toLocaleDateString();
       const savedDate = localStorage.getItem('pro_last_date');
-      const savedWorkouts = localStorage.getItem('pro_workouts_v4');
-      const savedTotal = localStorage.getItem('pro_total_v4');
-      const savedProfile = localStorage.getItem('pro_profile_v4');
-      const savedHistory = localStorage.getItem('pro_history_v4');
+      const savedWorkouts = localStorage.getItem('pro_workouts_v5');
+      const savedTotal = localStorage.getItem('pro_total_v5');
+      const savedProfile = localStorage.getItem('pro_profile_v5');
+      const savedHistory = localStorage.getItem('pro_history_v5');
       
       if (savedWorkouts) setWorkouts(JSON.parse(savedWorkouts));
       if (savedTotal) setTotalCompleted(JSON.parse(savedTotal));
@@ -105,16 +105,15 @@ export default function Home() {
   // Salvamento
   useEffect(() => {
     if (!isLoaded) return;
-    localStorage.setItem('pro_workouts_v4', JSON.stringify(workouts));
-    localStorage.setItem('pro_total_v4', JSON.stringify(totalCompleted));
+    localStorage.setItem('pro_workouts_v5', JSON.stringify(workouts));
+    localStorage.setItem('pro_total_v5', JSON.stringify(totalCompleted));
     localStorage.setItem('pro_water', JSON.stringify(waterIntake));
-    localStorage.setItem('pro_profile_v4', JSON.stringify(userProfile));
-    localStorage.setItem('pro_history_v4', JSON.stringify(workoutHistory));
+    localStorage.setItem('pro_profile_v5', JSON.stringify(userProfile));
+    localStorage.setItem('pro_history_v5', JSON.stringify(workoutHistory));
   }, [workouts, totalCompleted, waterIntake, userProfile, workoutHistory, isLoaded]);
 
   const t = THEMES[userProfile.theme || 'dark'];
 
-  // Ícones conforme a imagem enviada
   const navItems = [
     { id: 'inicio', label: 'Início', icon: '🏠', gradient: 'linear-gradient(135deg, #10B981, #059669)' },
     { id: 'meus-treinos', label: 'Treinos', icon: '📋', gradient: 'linear-gradient(135deg, #8B5CF6, #6D28D9)' },
@@ -263,27 +262,26 @@ export default function Home() {
                 </button>
               </div>
 
-              <div style={{ background: t.cardBg, padding: '20px', borderRadius: '24px', color: t.textPrimary, boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: `1px solid ${t.cardBorder}` }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: '900', marginBottom: '16px' }}>Semana Atual</h3>
+              {/* Semana Atual conforme o Print */}
+              <div style={{ background: t.cardBg, padding: '24px', borderRadius: '28px', color: t.textPrimary, boxShadow: '0 4px 20px rgba(0,0,0,0.04)', border: `1px solid ${t.cardBorder}` }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '900', marginBottom: '18px' }}>Semana Atual</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', textAlign: 'center' }}>
                   {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((dayLabel, index) => {
                     const isToday = index === new Date().getDay();
                     const isCompleted = daysCompletedThisMonth.includes(new Date().getDate() - (new Date().getDay() - index));
                     
-                    let bgColor = t.inputBg;
-                    let icon = '-';
-                    if (isCompleted) {
-                      bgColor = '#10B981';
-                      icon = '✓';
-                    } else if (isToday) {
-                      bgColor = '#F97316';
-                    }
-
                     return (
-                      <div key={index} style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.65rem', fontWeight: '800', color: isToday ? t.textPrimary : t.textSecondary }}>{dayLabel}</span>
-                        <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: bgColor, color: (isCompleted || isToday) ? '#FFF' : t.textSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '0.9rem' }}>
-                          {icon}
+                      <div key={index} style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: '800', color: isToday ? '#3B82F6' : t.textSecondary }}>{dayLabel}</span>
+                        <div style={{
+                          width: '42px', height: '42px', borderRadius: isToday ? '14px' : '50%',
+                          background: isToday ? '#3B82F6' : (isCompleted ? '#F0FDF4' : 'rgba(241, 245, 249, 0.6)'),
+                          color: isToday ? '#FFF' : '#10B981',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontWeight: '900', fontSize: '1rem',
+                          boxShadow: isToday ? '0 4px 12px rgba(59, 130, 246, 0.3)' : 'none'
+                        }}>
+                          {isCompleted || isToday ? '✓' : '-'}
                         </div>
                       </div>
                     );
@@ -313,7 +311,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* 2. ABA TREINOS (FICHAS - Conforme Print) */}
+          {/* 2. ABA TREINOS */}
           {activeTab === 'meus-treinos' && (
             <>
               <div style={{ marginBottom: '20px' }}>
@@ -400,7 +398,6 @@ export default function Home() {
                                   <input type="number" value={set.weight} onChange={(e) => updateSetData(w.id, ex.id, idx, 'weight', e.target.value)} readOnly={!isEditing && set.completed} style={{ width: '100%', textAlign: 'center', padding: '8px 2px', borderRadius: '12px', background: t.cardBg, border: `1px solid ${t.cardBorder}`, fontWeight: '800', fontSize: '0.9rem', color: t.textPrimary, outline: 'none' }} />
                                   <input type="number" value={set.reps} onChange={(e) => updateSetData(w.id, ex.id, idx, 'reps', e.target.value)} readOnly={!isEditing && set.completed} style={{ width: '100%', textAlign: 'center', padding: '8px 2px', borderRadius: '12px', background: t.cardBg, border: `1px solid ${t.cardBorder}`, fontWeight: '800', fontSize: '0.9rem', color: t.textPrimary, outline: 'none' }} />
                                   
-                                  {/* Botão de Check em Verde Conforme Print */}
                                   <div onClick={() => toggleSetComplete(w.id, ex.id, idx, ex.restType)} style={{ width: '32px', height: '32px', borderRadius: '10px', margin: '0 auto', background: set.completed ? '#10B981' : t.cardBg, border: `2px solid ${set.completed ? '#10B981' : t.textSecondary}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#FFF', fontWeight: 'bold', fontSize: '0.8rem' }}>
                                     {set.completed && '✓'}
                                   </div>
@@ -420,7 +417,7 @@ export default function Home() {
             </>
           )}
 
-          {/* 3. ABA DADOS */}
+          {/* 3. ABA DADOS (Calendário Modernizado) */}
           {activeTab === 'estatisticas' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
@@ -439,13 +436,14 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Calendário Atualizado: Histórico do Mês + Nome do Mês */}
-              <div style={{ background: t.cardBg, padding: '24px', borderRadius: '24px', color: t.textPrimary, boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: `1px solid ${t.cardBorder}` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: '900' }}>Histórico do Mês - {currentMonthName}</h3>
+              {/* Calendário Atualizado com Nome do Mês à Direita e Bolinhas Verdes */}
+              <div style={{ background: t.cardBg, padding: '24px', borderRadius: '28px', color: t.textPrimary, boxShadow: '0 4px 20px rgba(0,0,0,0.04)', border: `1px solid ${t.cardBorder}` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px' }}>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: '900' }}>Calendário de Sucesso 🏆</h3>
+                  <span style={{ fontSize: '0.9rem', color: '#D946EF', fontWeight: '900' }}>{currentMonthName}</span>
                 </div>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', textAlign: 'center', fontSize: '0.75rem', fontWeight: '800', color: t.textSecondary, marginBottom: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', textAlign: 'center', fontSize: '0.75rem', fontWeight: '800', color: t.textSecondary, marginBottom: '14px' }}>
                   <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
                 </div>
                 
@@ -453,7 +451,15 @@ export default function Home() {
                   {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
                     const isDone = daysCompletedThisMonth.includes(day);
                     return (
-                      <div key={day} style={{ height: '40px', borderRadius: '12px', background: isDone ? '#10B981' : t.inputBg, color: isDone ? '#FFF' : t.textPrimary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', fontSize: '0.9rem', boxShadow: isDone ? '0 4px 10px rgba(16, 185, 129, 0.3)' : 'none' }}>
+                      <div key={day} style={{
+                        height: '42px', borderRadius: '50%',
+                        background: isDone ? 'linear-gradient(135deg, #10B981, #059669)' : 'rgba(241, 245, 249, 0.5)',
+                        color: isDone ? '#FFF' : t.textPrimary,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontWeight: '800', fontSize: '0.95rem',
+                        boxShadow: isDone ? '0 6px 14px rgba(16, 185, 129, 0.4)' : 'none',
+                        transition: 'all 0.2s ease'
+                      }}>
                         {day}
                       </div>
                     );
@@ -479,7 +485,7 @@ export default function Home() {
                 ))}
               </div>
 
-              <div style={{ background: t.cardBg, padding: '24px', borderRadius: '24px', color: t.textPrimary, boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: `1px solid ${t.cardBorder}` }}>
+              <div style={{ background: t.cardBg, padding: '24px', borderRadius: '24px', color t.textPrimary, boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: `1px solid ${t.cardBorder}` }}>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: '900', marginBottom: '16px' }}>Medidas Corporais (cm)</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   {[ { label: 'Braço', field: 'arm' }, { label: 'Peito', field: 'chest' }, { label: 'Ombros', field: 'shoulder' }, { label: 'Cintura', field: 'waist' }, { label: 'Quadril', field: 'hip' }, { label: 'Coxa', field: 'thigh' }, { label: 'Panturrilha', field: 'calf' } ].map((m) => (
@@ -529,7 +535,7 @@ export default function Home() {
 
         </main>
 
-        {/* Navegação Conforme Imagem */}
+        {/* Navegação */}
         <nav style={{
           position: 'fixed', bottom: 0, left: 0, right: 0, background: t.navBg,
           backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
