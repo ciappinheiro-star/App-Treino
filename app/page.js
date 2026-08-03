@@ -590,7 +590,7 @@ export default function Home() {
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: t.inputBg, padding: '16px', borderRadius: '16px', marginBottom: '12px' }}>
-                  <span style={{ fontSize: '0.9rem', fontWeight: '800', color t.textSecondary }}>Descanso Normal (s)</span>
+                  <span style={{ fontSize: '0.9rem', fontWeight: '800', color: t.textSecondary }}>Descanso Normal (s)</span>
                   <input type="number" value={userProfile.restNormal} onChange={(e) => setUserProfile({ ...userProfile, restNormal: parseInt(e.target.value) || 0 })} style={{ width: '70px', textAlign: 'right', background: 'transparent', border: 'none', fontWeight: '900', fontSize: '1.1rem', color: t.textPrimary, outline: 'none' }} className="tabular-num" />
                 </div>
 
