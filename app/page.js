@@ -48,7 +48,7 @@ const MONTH_NAMES = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
 
-// Helper para pegar a data local correta
+// Helper para pegar a data local
 const getLocalDate = () => {
   const d = new Date();
   const year = d.getFullYear();
@@ -61,7 +61,9 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState('inicio');
   const [isEditing, setIsEditing] = useState(false);
   const [activeWorkout, setActiveWorkout] = useState(null);
-  const [workoutSession, setWorkoutSession] = useState(null);
+  
+  // Estado do Treino Ativo (Cronômetro Único e Global)
+  const [workoutSession, setWorkoutSession] = useState(null); // { workoutId, seconds }
   const [restTimer, setRestTimer] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -123,18 +125,27 @@ export default function Home() {
     { id: 'configuracoes', label: 'Ajustes', icon: '⚙️', gradient: 'linear-gradient(135deg, #EC4899, #BE185D)' }
   ];
 
-  // Cronômetros
+  // 1. Cronômetro GLOBAL da Sessão (Contagem contínua do treino inteiro)
   useEffect(() => {
-    let interval;
-    if (workoutSession && !isEditing) interval = setInterval(() => setWorkoutSession(p => ({ ...p, seconds: p.seconds + 1 })), 1000);
+    let interval = null;
+    if (workoutSession) {
+      interval = setInterval(() => {
+        setWorkoutSession(prev => prev ? { ...prev, seconds: prev.seconds + 1 } : null);
+      }, 1000);
+    }
     return () => clearInterval(interval);
-  }, [workoutSession, isEditing]);
+  }, [workoutSession]);
 
+  // 2. Cronômetro de Descanso entre Séries
   useEffect(() => {
-    let interval;
-    if (restTimer > 0 && !isEditing) interval = setInterval(() => setRestTimer(p => p - 1), 1000);
+    let interval = null;
+    if (restTimer > 0) {
+      interval = setInterval(() => {
+        setRestTimer(prev => (prev && prev > 0 ? prev - 1 : null));
+      }, 1000);
+    }
     return () => clearInterval(interval);
-  }, [restTimer, isEditing]);
+  }, [restTimer]);
 
   const formatTime = (totalSec) => `${Math.floor(totalSec / 60).toString().padStart(2, '0')}:${(totalSec % 60).toString().padStart(2, '0')}`;
   
@@ -145,14 +156,16 @@ export default function Home() {
     return `${m}m`;
   };
 
-  // FINALIZAR TREINO
+  // FINALIZAR TREINO (Grava o tempo total no histórico)
   const handleFinishWorkout = (wId) => {
+    if (!workoutSession) return;
     const todayStr = getLocalDate();
     setWorkoutHistory(prev => [...prev, { date: todayStr, duration: workoutSession.seconds }]);
     setWorkoutSession(null);
     setRestTimer(null);
     setTotalCompleted(prev => prev + 1);
 
+    // Reseta checks para a próxima sessão
     setWorkouts(workouts.map(w => w.id === wId ? {
       ...w,
       exercises: w.exercises.map(ex => ({
@@ -187,11 +200,11 @@ export default function Home() {
     }) } : ex) } : w));
   };
 
-  const addSet = (wId, exId) => setWorkouts(workouts.map(w => w.id === wId ? { ...w, exercises: w.exercises.map(ex => {
+  const addSet = (wId, exId) => setWorkouts(workouts.map(w => w.id !== wId ? w : { ...w, exercises: w.exercises.map(ex => {
     if (ex.id !== exId) return ex;
     const lastSet = ex.sets[ex.sets.length - 1] || { weight: 0, reps: 0, prev: '-', type: 'N' };
     return { ...ex, sets: [...ex.sets, { id: ex.sets.length + 1, type: 'N', prev: `${lastSet.weight}kg`, weight: lastSet.weight, reps: lastSet.reps, completed: false }] };
-  }) } : w));
+  }) }));
   
   const updateSetData = (wId, exId, setIndex, field, value) => {
     const numVal = parseFloat(value) || 0;
@@ -205,7 +218,7 @@ export default function Home() {
   // Cálculo Dinâmico de Estatísticas e Calendário
   const today = new Date();
   const currentYear = today.getFullYear();
-  const currentMonthIdx = today.getMonth(); // 0 a 11
+  const currentMonthIdx = today.getMonth();
   const currentMonthName = MONTH_NAMES[currentMonthIdx];
   const currentMonthStr = `${currentYear}-${String(currentMonthIdx + 1).padStart(2, '0')}`;
   
@@ -228,11 +241,12 @@ export default function Home() {
 
   const daysCompletedThisMonth = thisMonthHistory.map(h => parseInt(h.date.split('-')[2]));
 
-  // Dados Específicos do Calendário Real do Mês Vigorante
-  const firstDayOfWeekInMonth = new Date(currentYear, currentMonthIdx, 1).getDay(); // Em qual dia da semana o mês começa
-  const daysInCurrentMonth = new Date(currentYear, currentMonthIdx + 1, 0).getDate(); // Total de dias no mês (28, 29, 30 ou 31)
+  const firstDayOfWeekInMonth = new Date(currentYear, currentMonthIdx, 1).getDay(); 
+  const daysInCurrentMonth = new Date(currentYear, currentMonthIdx + 1, 0).getDate(); 
 
   if (!isLoaded) return null;
+
+  const currentActiveWorkoutObj = workouts.find(w => w.id === workoutSession?.workoutId);
 
   return (
     <>
@@ -247,6 +261,23 @@ export default function Home() {
 
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         
+        {/* BARRA FIXA SUPERIOR: MOSTRA O CRONÔMETRO GLOBAL DO TREINO */}
+        {workoutSession && (
+          <div style={{ position: 'sticky', top: 0, zIndex: 999, background: '#10B981', color: '#FFF', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)' }}>
+            <div>
+              <span style={{ fontSize: '0.65rem', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase', opacity: 0.9, display: 'block' }}>
+                TEMPO TOTAL DE TREINO ({currentActiveWorkoutObj?.title || 'Sessão'})
+              </span>
+              <span className="tabular-num" style={{ fontSize: '1.3rem', fontWeight: '900' }}>
+                ⏱️ {formatTime(workoutSession.seconds)}
+              </span>
+            </div>
+            <button onClick={() => handleFinishWorkout(workoutSession.workoutId)} style={{ background: '#FFF', color: '#059669', border: 'none', padding: '10px 16px', borderRadius: '14px', fontWeight: '900', fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+              ✓ FINALIZAR
+            </button>
+          </div>
+        )}
+
         <main style={{ flex: 1, padding: '24px 16px 110px 16px', maxWidth: '480px', margin: '0 auto', width: '100%' }}>
           
           <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -278,7 +309,7 @@ export default function Home() {
                 <h2 style={{ fontSize: '1.7rem', fontWeight: '900', margin: '4px 0 2px 0', color: '#FFF' }}>{workouts[0]?.title || 'Seu Treino'}</h2>
                 <p style={{ fontSize: '0.85rem', color: '#F3E8FF', marginBottom: '20px' }}>{workouts[0]?.category || 'Foco do dia'}</p>
                 <button onClick={() => { setActiveTab('meus-treinos'); setActiveWorkout(workouts[0]?.id); }} style={{ width: '100%', padding: '16px', background: '#FFFFFF', color: '#D946EF', border: 'none', borderRadius: '16px', fontWeight: '900', fontSize: '0.9rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-                  ▶ INICIAR TREINO
+                  IR PARA OS TREINOS
                 </button>
               </div>
 
@@ -337,7 +368,7 @@ export default function Home() {
           {activeTab === 'meus-treinos' && (
             <>
               <div style={{ marginBottom: '20px' }}>
-                <button onClick={() => { setIsEditing(!isEditing); setWorkoutSession(null); }} style={{ width: '100%', background: isEditing ? '#10B981' : t.cardBg, color: isEditing ? '#FFF' : t.textPrimary, border: `1px solid ${isEditing ? 'transparent' : t.cardBorder}`, padding: '16px', borderRadius: '20px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <button onClick={() => { setIsEditing(!isEditing); }} style={{ width: '100%', background: isEditing ? '#10B981' : t.cardBg, color: isEditing ? '#FFF' : t.textPrimary, border: `1px solid ${isEditing ? 'transparent' : t.cardBorder}`, padding: '16px', borderRadius: '20px', fontWeight: '900', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '14px' }}>
                   <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: isEditing ? 'rgba(255,255,255,0.2)' : t.inputBg, color: isEditing ? '#FFF' : t.textPrimary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>⚙️</div>
                   <div style={{ textAlign: 'left' }}>
                     <span style={{ fontSize: '0.95rem', display: 'block', fontWeight: '900' }}>{isEditing ? 'SALVAR ALTERAÇÕES' : 'EDITAR FICHAS'}</span>
@@ -346,9 +377,10 @@ export default function Home() {
                 </button>
               </div>
 
+              {/* CRONÔMETRO DE DESCANSO ENTRE SÉRIES */}
               {restTimer > 0 && !isEditing && (
                 <div style={{ position: 'fixed', bottom: '95px', left: '50%', transform: 'translateX(-50%)', background: '#3B82F6', color: '#FFF', padding: '14px 28px', borderRadius: '24px', boxShadow: '0 8px 20px rgba(59, 130, 246, 0.4)', zIndex: 1000, fontWeight: '900', fontSize: '0.9rem', border: '2px solid rgba(255,255,255,0.2)' }}>
-                  ⏳ DESCANSO: <span className="tabular-num">{formatTime(restTimer)}</span>
+                  ⏳ DESCANSO ENTRE SÉRIES: <span className="tabular-num">{formatTime(restTimer)}</span>
                 </div>
               )}
 
@@ -384,7 +416,7 @@ export default function Home() {
                         <div style={{ padding: '0 20px 20px 28px', borderTop: `1px solid ${t.inputBg}`, paddingTop: '18px' }}>
                           {!isEditing && (
                             <button onClick={() => isRunning ? handleFinishWorkout(w.id) : setWorkoutSession({ workoutId: w.id, seconds: 0 })} style={{ width: '100%', padding: '16px', borderRadius: '20px', background: isRunning ? '#10B981' : w.color, color: '#FFF', border: 'none', fontWeight: '900', cursor: 'pointer', marginBottom: '20px', fontSize: '0.9rem', boxShadow: '0 6px 16px rgba(0,0,0,0.15)' }}>
-                              {isRunning ? `✓ FINALIZAR SESSÃO (${formatTime(workoutSession.seconds)})` : '▶ COMEÇAR SESSÃO'}
+                              {isRunning ? `✓ FINALIZAR SESSÃO (${formatTime(workoutSession.seconds)})` : '▶ COMEÇAR SESSÃO DE TREINO'}
                             </button>
                           )}
 
@@ -409,14 +441,10 @@ export default function Home() {
                                 <span>SET</span><span>ANT.</span><span>KG</span><span>REPS</span><span>✓</span>
                               </div>
                               
-                              {ex.sets.map((set, idx) => {
-                                return (
+                              {ex.sets.map((set, idx) => (
                                 <div key={set.id} style={{ display: 'grid', gridTemplateColumns: '40px 1fr 1fr 1fr 38px', gap: '6px', alignItems: 'center', marginBottom: '8px', textAlign: 'center' }}>
-                                  
                                   <span style={{ fontSize: '0.9rem', fontWeight: '900', color: '#10B981' }}>{idx + 1}</span>
-
                                   <span style={{ fontSize: '0.75rem', color: t.textSecondary, fontWeight: '600' }}>{set.prev || '-'}</span>
-                                  
                                   <input type="number" value={set.weight} onChange={(e) => updateSetData(w.id, ex.id, idx, 'weight', e.target.value)} style={{ width: '100%', textAlign: 'center', padding: '10px 2px', borderRadius: '12px', background: t.cardBg, border: `1px solid ${t.cardBorder}`, fontWeight: '800', fontSize: '0.9rem', color: t.textPrimary, outline: 'none' }} className="tabular-num" />
                                   <input type="number" value={set.reps} onChange={(e) => updateSetData(w.id, ex.id, idx, 'reps', e.target.value)} style={{ width: '100%', textAlign: 'center', padding: '10px 2px', borderRadius: '12px', background: t.cardBg, border: `1px solid ${t.cardBorder}`, fontWeight: '800', fontSize: '0.9rem', color: t.textPrimary, outline: 'none' }} className="tabular-num" />
                                   
@@ -432,7 +460,7 @@ export default function Home() {
                                     {set.completed && '✓'}
                                   </div>
                                 </div>
-                              )})}
+                              ))}
                               <button onClick={() => addSet(w.id, ex.id)} style={{ width: '100%', marginTop: '10px', padding: '10px', background: 'transparent', border: `1px dashed ${t.textSecondary}`, color: t.textSecondary, borderRadius: '12px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: '800' }}>+ Adicionar Série</button>
                             </div>
                           ))}
@@ -447,7 +475,7 @@ export default function Home() {
             </>
           )}
 
-          {/* 3. ABA DADOS (Calendário Dinâmico e 100% Preciso) */}
+          {/* 3. ABA DADOS */}
           {activeTab === 'estatisticas' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
@@ -478,7 +506,7 @@ export default function Home() {
                 </div>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px', textAlign: 'center' }}>
-                  {/* Espaços vazios iniciais para alinhar com o dia da semana correto */}
+                  {/* Espaços vazios iniciais */}
                   {Array.from({ length: firstDayOfWeekInMonth }).map((_, i) => (
                     <div key={`empty-${i}`} style={{ height: '42px' }} />
                   ))}
@@ -562,7 +590,7 @@ export default function Home() {
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: t.inputBg, padding: '16px', borderRadius: '16px', marginBottom: '12px' }}>
-                  <span style={{ fontSize: '0.9rem', fontWeight: '800', color: t.textSecondary }}>Descanso Normal (s)</span>
+                  <span style={{ fontSize: '0.9rem', fontWeight: '800', color t.textSecondary }}>Descanso Normal (s)</span>
                   <input type="number" value={userProfile.restNormal} onChange={(e) => setUserProfile({ ...userProfile, restNormal: parseInt(e.target.value) || 0 })} style={{ width: '70px', textAlign: 'right', background: 'transparent', border: 'none', fontWeight: '900', fontSize: '1.1rem', color: t.textPrimary, outline: 'none' }} className="tabular-num" />
                 </div>
 
@@ -576,7 +604,7 @@ export default function Home() {
 
         </main>
 
-        {/* Navegação */}
+        {/* NAVEGAÇÃO */}
         <nav style={{
           position: 'fixed', bottom: 0, left: 0, right: 0, background: t.navBg,
           backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
