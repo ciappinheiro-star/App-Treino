@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 // Paleta de Cores
 const THEMES = {
@@ -48,7 +48,6 @@ const MONTH_NAMES = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
 
-// Helper para pegar a data local
 const getLocalDate = () => {
   const d = new Date();
   const year = d.getFullYear();
@@ -62,10 +61,13 @@ export default function Home() {
   const [isEditing, setIsEditing] = useState(false);
   const [activeWorkout, setActiveWorkout] = useState(null);
   
-  // Estado do Treino Ativo (Cronômetro Único e Global)
-  const [workoutSession, setWorkoutSession] = useState(null); // { workoutId, seconds }
-  const [restTimer, setRestTimer] = useState(null);
+  // Sessão de Treino em Tempo Real (usando timestamps para funcionar em segundo plano)
+  const [workoutSession, setWorkoutSession] = useState(null); // { workoutId, startTime, elapsedSeconds }
+  const [restEndTime, setRestTimerEnd] = useState(null); // Timestamp de término do descanso
+  const [restSecondsLeft, setRestSecondsLeft] = useState(null);
+  
   const [isLoaded, setIsLoaded] = useState(false);
+  const audioCtxRef = useRef(null);
 
   // Estados de Dados
   const [totalCompleted, setTotalCompleted] = useState(0);
@@ -80,23 +82,50 @@ export default function Home() {
     waterGoal: 3000, theme: 'dark', restNormal: 60, restCompound: 120
   });
 
-  // Carregamento Inicial
+  // Função para Tocar Beep de Término do Descanso
+  const playBeep = () => {
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+      
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime); // Nota A5
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.8);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.8);
+    } catch (e) { console.error('Erro ao reproduzir som:', e); }
+  };
+
+  // Carregamento Inicial com Verificação de Zeramento Diário da Água
   useEffect(() => {
     try {
       const todayStr = getLocalDate();
       const savedDate = localStorage.getItem('pro_last_date');
-      const savedWorkouts = localStorage.getItem('pro_workouts_v8');
-      const savedTotal = localStorage.getItem('pro_total_v8');
-      const savedProfile = localStorage.getItem('pro_profile_v8');
-      const savedHistory = localStorage.getItem('pro_history_v8');
+      const savedWorkouts = localStorage.getItem('pro_workouts_v9');
+      const savedTotal = localStorage.getItem('pro_total_v9');
+      const savedProfile = localStorage.getItem('pro_profile_v9');
+      const savedHistory = localStorage.getItem('pro_history_v9');
       
       if (savedWorkouts) setWorkouts(JSON.parse(savedWorkouts));
       if (savedTotal) setTotalCompleted(JSON.parse(savedTotal));
-      if (savedProfile) setUserProfile({ ...userProfile, ...JSON.parse(savedProfile) });
+      if (savedProfile) setUserProfile(prev => ({ ...prev, ...JSON.parse(savedProfile) }));
       if (savedHistory) setWorkoutHistory(JSON.parse(savedHistory));
 
+      // Se mudou o dia, zera a água automaticamente
       if (savedDate !== todayStr) {
         setWaterIntake(0);
+        localStorage.setItem('pro_water', JSON.stringify(0));
         localStorage.setItem('pro_last_date', todayStr);
       } else {
         const savedWater = localStorage.getItem('pro_water');
@@ -105,14 +134,14 @@ export default function Home() {
     } catch (e) { console.error(e); } finally { setIsLoaded(true); }
   }, []);
 
-  // Salvamento
+  // Salvamento Automático
   useEffect(() => {
     if (!isLoaded) return;
-    localStorage.setItem('pro_workouts_v8', JSON.stringify(workouts));
-    localStorage.setItem('pro_total_v8', JSON.stringify(totalCompleted));
+    localStorage.setItem('pro_workouts_v9', JSON.stringify(workouts));
+    localStorage.setItem('pro_total_v9', JSON.stringify(totalCompleted));
     localStorage.setItem('pro_water', JSON.stringify(waterIntake));
-    localStorage.setItem('pro_profile_v8', JSON.stringify(userProfile));
-    localStorage.setItem('pro_history_v8', JSON.stringify(workoutHistory));
+    localStorage.setItem('pro_profile_v9', JSON.stringify(userProfile));
+    localStorage.setItem('pro_history_v9', JSON.stringify(workoutHistory));
   }, [workouts, totalCompleted, waterIntake, userProfile, workoutHistory, isLoaded]);
 
   const t = THEMES[userProfile.theme || 'dark'];
@@ -125,29 +154,42 @@ export default function Home() {
     { id: 'configuracoes', label: 'Ajustes', icon: '⚙️', gradient: 'linear-gradient(135deg, #EC4899, #BE185D)' }
   ];
 
-  // 1. Cronômetro GLOBAL da Sessão (Contagem contínua do treino inteiro)
+  // 1. Cronômetro de Treino Baseado em Timestamp (Funciona com tela apagada)
   useEffect(() => {
     let interval = null;
     if (workoutSession) {
       interval = setInterval(() => {
-        setWorkoutSession(prev => prev ? { ...prev, seconds: prev.seconds + 1 } : null);
-      }, 1000);
+        const now = Date.now();
+        const elapsed = Math.floor((now - workoutSession.startTime) / 1000);
+        setWorkoutSession(prev => prev ? { ...prev, elapsedSeconds: elapsed } : null);
+      }, 500);
     }
     return () => clearInterval(interval);
   }, [workoutSession]);
 
-  // 2. Cronômetro de Descanso entre Séries
+  // 2. Cronômetro de Descanso Baseado em Timestamp + Sinal Sonoro ao Zerar
   useEffect(() => {
     let interval = null;
-    if (restTimer > 0) {
+    if (restEndTime) {
       interval = setInterval(() => {
-        setRestTimer(prev => (prev && prev > 0 ? prev - 1 : null));
-      }, 1000);
+        const now = Date.now();
+        const remaining = Math.ceil((restEndTime - now) / 1000);
+        if (remaining <= 0) {
+          playBeep();
+          setRestTimerEnd(null);
+          setRestSecondsLeft(null);
+        } else {
+          setRestSecondsLeft(remaining);
+        }
+      }, 500);
     }
     return () => clearInterval(interval);
-  }, [restTimer]);
+  }, [restEndTime]);
 
-  const formatTime = (totalSec) => `${Math.floor(totalSec / 60).toString().padStart(2, '0')}:${(totalSec % 60).toString().padStart(2, '0')}`;
+  const formatTime = (totalSec) => {
+    const s = Math.max(0, totalSec || 0);
+    return `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
+  };
   
   const formatDurationText = (totalSecs) => {
     const h = Math.floor(totalSecs / 3600);
@@ -156,16 +198,19 @@ export default function Home() {
     return `${m}m`;
   };
 
-  // FINALIZAR TREINO (Grava o tempo total no histórico)
+  const startWorkoutSession = (wId) => {
+    setWorkoutSession({ workoutId: wId, startTime: Date.now(), elapsedSeconds: 0 });
+  };
+
   const handleFinishWorkout = (wId) => {
     if (!workoutSession) return;
     const todayStr = getLocalDate();
-    setWorkoutHistory(prev => [...prev, { date: todayStr, duration: workoutSession.seconds }]);
+    setWorkoutHistory(prev => [...prev, { date: todayStr, duration: workoutSession.elapsedSeconds }]);
     setWorkoutSession(null);
-    setRestTimer(null);
+    setRestTimerEnd(null);
+    setRestSecondsLeft(null);
     setTotalCompleted(prev => prev + 1);
 
-    // Reseta checks para a próxima sessão
     setWorkouts(workouts.map(w => w.id === wId ? {
       ...w,
       exercises: w.exercises.map(ex => ({
@@ -175,7 +220,7 @@ export default function Home() {
     } : w));
   };
 
-  // Funções de Treino
+  // Funções de Gerenciamento de Treinos
   const addNewWorkout = () => setWorkouts([...workouts, { id: `W_${Date.now()}`, title: 'Novo Treino', category: 'Foco do dia', color: '#00D2FF', icon: '⚡', exercises: [] }]);
   const deleteWorkout = (wId) => setWorkouts(workouts.filter(w => w.id !== wId));
   const addNewExercise = (wId) => setWorkouts(workouts.map(w => w.id !== wId ? w : { ...w, exercises: [...w.exercises, { id: `E_${Date.now()}`, name: 'Novo Exercício', notes: '', restType: 'normal', sets: [{ id: 1, type: 'N', prev: '-', weight: 0, reps: 0, completed: false }] }] }));
@@ -192,10 +237,23 @@ export default function Home() {
 
   const toggleSetComplete = (wId, exId, setIndex, restType) => {
     if (isEditing) return;
-    const restTime = restType === 'compound' ? userProfile.restCompound : userProfile.restNormal;
+    
+    // Desbloqueia a API de Áudio do navegador ao clicar no primeiro check
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume();
+    }
+
+    const restTimeSec = restType === 'compound' ? userProfile.restCompound : userProfile.restNormal;
+    
     setWorkouts(workouts.map(w => w.id === wId ? { ...w, exercises: w.exercises.map(ex => ex.id === exId ? { ...ex, sets: ex.sets.map((s, i) => {
       if (i !== setIndex) return s;
-      if (!s.completed) setRestTimer(restTime);
+      if (!s.completed) {
+        setRestTimerEnd(Date.now() + restTimeSec * 1000);
+        setRestSecondsLeft(restTimeSec);
+      }
       return { ...s, completed: !s.completed };
     }) } : ex) } : w));
   };
@@ -215,7 +273,7 @@ export default function Home() {
 
   const toggleTheme = () => setUserProfile({ ...userProfile, theme: userProfile.theme === 'light' ? 'dark' : 'light' });
 
-  // Cálculo Dinâmico de Estatísticas e Calendário
+  // Métricas e Calendário
   const today = new Date();
   const currentYear = today.getFullYear();
   const currentMonthIdx = today.getMonth();
@@ -261,7 +319,7 @@ export default function Home() {
 
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         
-        {/* BARRA FIXA SUPERIOR: MOSTRA O CRONÔMETRO GLOBAL DO TREINO */}
+        {/* BARRA FIXA SUPERIOR COM O TEMPO DO TREINO */}
         {workoutSession && (
           <div style={{ position: 'sticky', top: 0, zIndex: 999, background: '#10B981', color: '#FFF', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)' }}>
             <div>
@@ -269,7 +327,7 @@ export default function Home() {
                 TEMPO TOTAL DE TREINO ({currentActiveWorkoutObj?.title || 'Sessão'})
               </span>
               <span className="tabular-num" style={{ fontSize: '1.3rem', fontWeight: '900' }}>
-                ⏱️ {formatTime(workoutSession.seconds)}
+                ⏱️ {formatTime(workoutSession.elapsedSeconds)}
               </span>
             </div>
             <button onClick={() => handleFinishWorkout(workoutSession.workoutId)} style={{ background: '#FFF', color: '#059669', border: 'none', padding: '10px 16px', borderRadius: '14px', fontWeight: '900', fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
@@ -342,6 +400,7 @@ export default function Home() {
                 </div>
               </div>
 
+              {/* Bloco de Hidratação com Botões de 200ml, 250ml, 500ml e 700ml */}
               <div style={{ background: t.cardBg, padding: '20px', borderRadius: '24px', color: t.textPrimary, boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: `1px solid ${t.cardBorder}` }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -356,9 +415,13 @@ export default function Home() {
                 <div style={{ width: '100%', height: '12px', background: t.inputBg, borderRadius: '6px', overflow: 'hidden', marginBottom: '16px' }}>
                   <div style={{ width: `${Math.min((waterIntake / userProfile.waterGoal) * 100, 100)}%`, height: '100%', background: '#3B82F6', borderRadius: '6px', transition: 'width 0.4s ease' }} />
                 </div>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button onClick={() => setWaterIntake(p => p + 250)} style={{ flex: 1, padding: '12px', background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', borderRadius: '12px', fontWeight: '900', fontSize: '0.8rem', cursor: 'pointer' }}>+ 250 ml</button>
-                  <button onClick={() => setWaterIntake(p => p + 500)} style={{ flex: 1, padding: '12px', background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', borderRadius: '12px', fontWeight: '900', fontSize: '0.8rem', cursor: 'pointer' }}>+ 500 ml</button>
+                
+                {/* Grade com 4 Botões Rápidos */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px' }}>
+                  <button onClick={() => setWaterIntake(p => p + 200)} style={{ padding: '10px 4px', background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', borderRadius: '12px', fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer' }}>+200 ml</button>
+                  <button onClick={() => setWaterIntake(p => p + 250)} style={{ padding: '10px 4px', background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', borderRadius: '12px', fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer' }}>+250 ml</button>
+                  <button onClick={() => setWaterIntake(p => p + 500)} style={{ padding: '10px 4px', background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', borderRadius: '12px', fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer' }}>+500 ml</button>
+                  <button onClick={() => setWaterIntake(p => p + 700)} style={{ padding: '10px 4px', background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', borderRadius: '12px', fontWeight: '900', fontSize: '0.75rem', cursor: 'pointer' }}>+700 ml</button>
                 </div>
               </div>
             </div>
@@ -377,10 +440,10 @@ export default function Home() {
                 </button>
               </div>
 
-              {/* CRONÔMETRO DE DESCANSO ENTRE SÉRIES */}
-              {restTimer > 0 && !isEditing && (
+              {/* BANNER DO CRONÔMETRO DE DESCANSO ENTRE SÉRIES */}
+              {restSecondsLeft !== null && restSecondsLeft > 0 && !isEditing && (
                 <div style={{ position: 'fixed', bottom: '95px', left: '50%', transform: 'translateX(-50%)', background: '#3B82F6', color: '#FFF', padding: '14px 28px', borderRadius: '24px', boxShadow: '0 8px 20px rgba(59, 130, 246, 0.4)', zIndex: 1000, fontWeight: '900', fontSize: '0.9rem', border: '2px solid rgba(255,255,255,0.2)' }}>
-                  ⏳ DESCANSO ENTRE SÉRIES: <span className="tabular-num">{formatTime(restTimer)}</span>
+                  ⏳ DESCANSO ENTRE SÉRIES: <span className="tabular-num">{formatTime(restSecondsLeft)}</span>
                 </div>
               )}
 
@@ -415,8 +478,8 @@ export default function Home() {
                       {isOpen && (
                         <div style={{ padding: '0 20px 20px 28px', borderTop: `1px solid ${t.inputBg}`, paddingTop: '18px' }}>
                           {!isEditing && (
-                            <button onClick={() => isRunning ? handleFinishWorkout(w.id) : setWorkoutSession({ workoutId: w.id, seconds: 0 })} style={{ width: '100%', padding: '16px', borderRadius: '20px', background: isRunning ? '#10B981' : w.color, color: '#FFF', border: 'none', fontWeight: '900', cursor: 'pointer', marginBottom: '20px', fontSize: '0.9rem', boxShadow: '0 6px 16px rgba(0,0,0,0.15)' }}>
-                              {isRunning ? `✓ FINALIZAR SESSÃO (${formatTime(workoutSession.seconds)})` : '▶ COMEÇAR SESSÃO DE TREINO'}
+                            <button onClick={() => isRunning ? handleFinishWorkout(w.id) : startWorkoutSession(w.id)} style={{ width: '100%', padding: '16px', borderRadius: '20px', background: isRunning ? '#10B981' : w.color, color: '#FFF', border: 'none', fontWeight: '900', cursor: 'pointer', marginBottom: '20px', fontSize: '0.9rem', boxShadow: '0 6px 16px rgba(0,0,0,0.15)' }}>
+                              {isRunning ? `✓ FINALIZAR SESSÃO (${formatTime(workoutSession.elapsedSeconds)})` : '▶ COMEÇAR SESSÃO DE TREINO'}
                             </button>
                           )}
 
@@ -494,7 +557,7 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Calendário Dinâmico Exato */}
+              {/* Calendário Dinâmico */}
               <div style={{ background: t.cardBg, padding: '24px', borderRadius: '28px', color: t.textPrimary, boxShadow: '0 4px 20px rgba(0,0,0,0.04)', border: `1px solid ${t.cardBorder}` }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px' }}>
                   <h3 style={{ fontSize: '1.15rem', fontWeight: '900' }}>Calendário de Sucesso 🏆</h3>
@@ -506,12 +569,10 @@ export default function Home() {
                 </div>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px', textAlign: 'center' }}>
-                  {/* Espaços vazios iniciais */}
                   {Array.from({ length: firstDayOfWeekInMonth }).map((_, i) => (
                     <div key={`empty-${i}`} style={{ height: '42px' }} />
                   ))}
 
-                  {/* Dias do Mês */}
                   {Array.from({ length: daysInCurrentMonth }, (_, i) => i + 1).map((day) => {
                     const isDone = daysCompletedThisMonth.includes(day);
                     const isToday = day === today.getDate();
